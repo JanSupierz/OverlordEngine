@@ -1,5 +1,5 @@
 #pragma once
-class SpikiyMaterial;
+class SpikyMaterial;
 
 class SpikyScene final: public GameScene
 {
@@ -15,9 +15,13 @@ public:
 protected:
 	void Initialize() override;
 	void Update() override;
-	void Draw() override;
 	void OnGUI() override;
 
 private:
-	//SpikyMaterial* m_pMaterial{};
+	GameObject* m_pObject{};
+	SpikyMaterial* m_pMaterial{};
+
+	XMFLOAT4 m_Color{ DirectX::Colors::Red };
+	float m_SpikeLength{ 0.5f };
+	float m_Angle{};
 };

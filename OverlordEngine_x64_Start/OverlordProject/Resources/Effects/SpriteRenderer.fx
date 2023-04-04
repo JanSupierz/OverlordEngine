@@ -56,17 +56,19 @@ void CreateVertex(inout TriangleStream<GS_DATA> triStream, float3 pos, float4 co
 {
     if (rotation != 0)
     {
-		//Step 3.
-		//Do rotation calculations
-		//Transform to origin
-		//Rotate
-		//Retransform to initial position
+        //Transform to origin
+        pos.xy -= (pivotOffset + offset);
+
+        //Rotate
+        pos.xy = mul(float2x2(rotCosSin.x, -rotCosSin.y, rotCosSin.y, rotCosSin.x), pos.xy);
+
+        //Retransform to initial position
+        pos.xy += offset;
     }
     else
     {
-		//Step 2.
-		//No rotation calculations (no need to do the rotation calculations if there is no rotation applied > redundant operations)
-		//Just apply the pivot offset
+        //Just apply the pivot offset
+        pos.xy -= pivotOffset;
     }
 
 	//Geometry Vertex Output
@@ -81,14 +83,32 @@ void CreateVertex(inout TriangleStream<GS_DATA> triStream, float3 pos, float4 co
 void MainGS(point VS_DATA vertex[1], inout TriangleStream<GS_DATA> triStream)
 {
 	//Given Data (Vertex Data)
-    float3 position = float3(0, 0, 0); //Extract the position data from the VS_DATA vertex struct
-    float2 offset = float2(0, 0); //Extract the offset data from the VS_DATA vertex struct (initial X and Y position)
-    float rotation = 0; //Extract the rotation data from the VS_DATA vertex struct
-    float2 pivot = float2(0, 0); //Extract the pivot data from the VS_DATA vertex struct
-    float2 scale = float2(0, 0); //Extract the scale data from the VS_DATA vertex struct
-    float2 texCoord = float2(0, 0); //Initial Texture Coordinate
-	
-	//...
+    //Extract the position data from the VS_DATA vertex struct
+    float3 position = vertex[0].TransformData.xyz;
+
+    //Extract the offset data from the VS_DATA vertex struct (initial X and Y position)
+    float2 offset = vertex[0].TransformData.xy;
+
+    //Extract the rotation data from the VS_DATA vertex struct
+    float rotation = vertex[0].TransformData.w;
+
+    //Extract the pivot data from the VS_DATA vertex struct
+    float2 pivot = vertex[0].TransformData2.xy;
+
+    //Extract the scale data from the VS_DATA vertex struct
+    float2 scale = vertex[0].TransformData2.zw;
+
+    //Initial Texture Coordinate
+    float2 texCoord = float2(0, 0); 
+
+    //Cos and sin rotation
+    float2 rotCosSin = float2(cos(rotation), sin(rotation));
+
+    //Color
+    float4 color = vertex[0].Color;
+
+    //Scaled Pivot
+    pivot.xy *= gTextureSize.xy * scale.xy;
 
 	// LT----------RT //TringleStrip (LT > RT > LB, LB > RB > RT)
 	// |          / |
@@ -98,16 +118,28 @@ void MainGS(point VS_DATA vertex[1], inout TriangleStream<GS_DATA> triStream)
 	// LB----------RB
 
 	//VERTEX 1 [LT]
-    CreateVertex(triStream, position, float4(1, 1, 1, 1), texCoord, rotation, float2(0, 0), offset, float2(0, 0)); //Change the color data too!
+    CreateVertex(triStream, position, color, texCoord, rotation, rotCosSin, offset, pivot);
 
 	//VERTEX 2 [RT]
-    CreateVertex(triStream, position, float4(1, 1, 1, 1), texCoord, rotation, float2(0, 0), offset, float2(0, 0)); //Change the color data too!
+    position.x += gTextureSize.x * scale.x;
+    texCoord.x = 1;
 
+    CreateVertex(triStream, position, color, texCoord, rotation, rotCosSin, offset, pivot);
+                                 
 	//VERTEX 3 [LB]
-    CreateVertex(triStream, position, float4(1, 1, 1, 1), texCoord, rotation, float2(0, 0), offset, float2(0, 0)); //Change the color data too!
+    position.x -= gTextureSize.x * scale.x;
+    texCoord.x = 0;
 
+    position.y += gTextureSize.y * scale.y;
+    texCoord.y = 1;
+
+    CreateVertex(triStream, position, color, texCoord, rotation, rotCosSin, offset, pivot);
+                                 
 	//VERTEX 4 [RB]
-    CreateVertex(triStream, position, float4(1, 1, 1, 1), texCoord, rotation, float2(0, 0), offset, float2(0, 0)); //Change the color data too!
+    position.x += gTextureSize.x * scale.x;
+    texCoord.x = 1;
+
+    CreateVertex(triStream, position, color, texCoord, rotation, rotCosSin, offset, pivot);
 }
 
 //PIXEL SHADER
@@ -124,7 +156,7 @@ technique11 Default
     {
         SetRasterizerState(BackCulling);
         SetBlendState(EnableBlending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		//SetDepthStencilState(NoDepth,0);
+		SetDepthStencilState(NoDepth,0);
         SetVertexShader(CompileShader(vs_4_0, MainVS()));
         SetGeometryShader(CompileShader(gs_4_0, MainGS()));
         SetPixelShader(CompileShader(ps_4_0, MainPS()));

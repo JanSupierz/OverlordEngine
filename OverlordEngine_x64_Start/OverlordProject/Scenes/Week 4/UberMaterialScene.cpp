@@ -8,7 +8,7 @@ void UberMaterialScene::Initialize()
 	m_SceneContext.settings.enableOnGUI = true;
 	m_SceneContext.settings.drawGrid = false;
 
-	//--- Chair ---
+	//--- Object ---
 	m_pObject = new GameObject();
 
 	//Model
