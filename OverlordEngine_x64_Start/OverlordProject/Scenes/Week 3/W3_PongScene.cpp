@@ -121,8 +121,8 @@ void W3_PongScene::Initialize()
 
 	//Input actions
 	const auto pInput{ m_SceneContext.pInput };
-	pInput->AddInputAction(InputAction{ InputIds::Left_LeftPlayer,InputState::down, 'F',-1,XINPUT_GAMEPAD_DPAD_RIGHT });
-	pInput->AddInputAction(InputAction{ InputIds::Right_LeftPlayer,InputState::down,'R',-1,XINPUT_GAMEPAD_DPAD_LEFT });
+	pInput->AddInputAction(InputAction{ InputIds::Left_LeftPlayer,InputState::down, 'S',-1,XINPUT_GAMEPAD_DPAD_RIGHT });
+	pInput->AddInputAction(InputAction{ InputIds::Right_LeftPlayer,InputState::down,'W',-1,XINPUT_GAMEPAD_DPAD_LEFT });
 	pInput->AddInputAction(InputAction{ InputIds::Left_RightPlayer,InputState::down, VK_DOWN,-1});
 	pInput->AddInputAction(InputAction{ InputIds::Right_RightPlayer,InputState::down,VK_UP,-1});
 
