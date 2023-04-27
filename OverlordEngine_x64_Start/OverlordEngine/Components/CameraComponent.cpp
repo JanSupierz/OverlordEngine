@@ -63,8 +63,41 @@ void CameraComponent::SetActive(bool active)
 	pScene->SetActiveCamera(active?this:nullptr); //Switch to default camera if active==false
 }
 
-GameObject* CameraComponent::Pick(CollisionGroup /*ignoreGroups*/) const
+GameObject* CameraComponent::Pick(CollisionGroup ignoreGroups) const
 {
-	TODO_W7(L"Implement Picking Logic")
+	const POINT& mousePos{ InputManager::GetMousePosition() };
+	const float halfWidth{ m_pScene->GetSceneContext().windowWidth / 2.f };
+	const float halfHeight{ m_pScene->GetSceneContext().windowHeight / 2.f };
+
+	//Convert mouse position to ndc space
+	const float xNdc{ (mousePos.x - halfWidth) / halfWidth };
+	const float yNdc{ (halfHeight - mousePos.y) / halfHeight };
+
+	//Load the inverse of the view projection matrix
+	const XMMATRIX& ndcToWorld{ XMLoadFloat4x4(&GetViewProjectionInverse()) };
+
+	//Transform ndc to world
+	const XMVECTOR rayStart{ XMVector3TransformCoord(XMVECTOR{ xNdc, yNdc, 0.0f }, ndcToWorld) };
+	const XMVECTOR rayEnd{ XMVector3TransformCoord(XMVECTOR{ xNdc, yNdc, 1.0f }, ndcToWorld) };
+
+	// Calculate the ray direction and normalize it
+	const XMVECTOR rayDir{ XMVector3Normalize(rayEnd - rayStart) };
+
+	//Store the XMVECTOR ray data in PxVec3 variables
+	const PxVec3 rayOrigin{ XMVectorGetX(rayStart), XMVectorGetY(rayStart), XMVectorGetZ(rayStart) };
+	const PxVec3 rayDirection{ XMVectorGetX(rayDir), XMVectorGetY(rayDir), XMVectorGetZ(rayDir) };
+
+	//Create the filter data for the raycast
+	PxQueryFilterData filterData{};
+	filterData.data.word0 = ~UINT(ignoreGroups);
+
+	//Check collisions
+	PxRaycastBuffer hit{};
+	if (m_pScene->GetPhysxProxy()->Raycast(rayOrigin, rayDirection, PX_MAX_F32, hit, PxHitFlag::eDEFAULT, filterData))
+	{
+		return static_cast<BaseComponent*>(hit.block.actor->userData)->GetGameObject();
+	}
+
+	//Raycast didn't hit, return nullptr
 	return nullptr;
 }

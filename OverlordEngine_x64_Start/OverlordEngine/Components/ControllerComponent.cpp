@@ -6,11 +6,37 @@ ControllerComponent::ControllerComponent(const PxCapsuleControllerDesc& controll
 {
 }
 
+PxExtendedVec3 ToPxExtendedVec3(const DirectX::XMFLOAT3& float3)
+{
+	return PxExtendedVec3(float3.x, float3.y, float3.z);
+}
+
 void ControllerComponent::Initialize(const SceneContext& /*sceneContext*/)
 {
 	if(!m_IsInitialized)
 	{
-		TODO_W7(L"Complete the ControllerComponent Intialization")
+		// Set position based on TransformComponent
+		m_ControllerDesc.position = ToPxExtendedVec3(GetTransform()->GetPosition());
+
+		// Store a pointer to this ControllerComponent in the user data field
+		m_ControllerDesc.userData = this;
+
+		// Retrieve the PxControllerManager from the PhysxProxy class
+		const auto& pPhysxProxy{ m_pScene->GetPhysxProxy() };
+		const auto& pControllerManager{ pPhysxProxy->GetControllerManager() };
+
+		// Create the controller
+		m_pController = pControllerManager->createController(m_ControllerDesc);
+		ASSERT_NULL_(m_pController);
+
+		//Set user data for the underlying actor
+		m_pController->getActor()->userData = this;
+
+		//Set collision group and ignore group
+		SetCollisionGroup(static_cast<CollisionGroup>(m_CollisionGroups.word0));
+		SetCollisionIgnoreGroup(static_cast<CollisionGroup>(m_CollisionGroups.word1));
+
+		m_IsInitialized = true;
 	}
 }
 
