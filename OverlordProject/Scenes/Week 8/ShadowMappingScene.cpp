@@ -73,5 +73,5 @@ void ShadowMappingScene::OnGUI()
 {
 	ImGui::Checkbox("Draw ShadowMap", &m_DrawShadowMap);
 	ImGui::SliderFloat("ShadowMap Scale", &m_ShadowMapScale, 0.f, 1.f);
-	//MaterialManager::Get()->GetMaterial(2)->DrawImGui();
+	MaterialManager::Get()->GetMaterial(2)->DrawImGui();
 }
