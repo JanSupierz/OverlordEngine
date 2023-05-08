@@ -2,7 +2,7 @@
 struct CharacterDesc
 {
 	CharacterDesc(
-		PxMaterial* pMaterial,
+		PxMaterial* pMaterial,		
 		float radius = .5f,
 		float height = 2.f)
 	{
@@ -15,8 +15,6 @@ struct CharacterDesc
 	float maxMoveSpeed{ 15.f };
 	float maxFallSpeed{ 15.f };
 
-	float JumpSpeed{ 15.f };
-
 	float moveAccelerationTime{ .3f };
 	float fallAccelerationTime{ .3f };
 
@@ -28,7 +26,7 @@ struct CharacterDesc
 	int actionId_MoveRight{ -1 };
 	int actionId_MoveForward{ -1 };
 	int actionId_MoveBackward{ -1 };
-	int actionId_Jump{ -1 };
+	GamepadIndex gamepadIndex{ 0 };
 };
 
 class Character : public GameObject
@@ -49,11 +47,10 @@ protected:
 	void Update(const SceneContext&) override;
 
 private:
-	CameraComponent* m_pCameraComponent{};
 	ControllerComponent* m_pControllerComponent{};
 
 	CharacterDesc m_CharacterDesc;
-	float m_TotalPitch{}, m_TotalYaw{};				//Total camera Pitch(X) and Yaw(Y) rotation
+	float m_TotalYaw{};								//Total camera Pitch(X) and Yaw(Y) rotation
 	float m_MoveAcceleration{},						//Acceleration required to reach maxMoveVelocity after 1 second (maxMoveVelocity / moveAccelerationTime)
 		m_FallAcceleration{},						//Acceleration required to reach maxFallVelocity after 1 second (maxFallVelocity / fallAccelerationTime)
 		m_MoveSpeed{};								//MoveSpeed > Horizontal Velocity = MoveDirection * MoveVelocity (= TotalVelocity.xz)

@@ -67,8 +67,8 @@ void ShadowMapRenderer::Begin(const SceneContext& sceneContext)
 
 	//2. Calculate the Light ViewProjection and store in m_LightVP
 	// - Use XMMatrixOrtographicLH to create Projection Matrix
-	const float viewWidth{ 100.f * sceneContext.aspectRatio };
-	constexpr float viewHeight{ 100.f };
+	const float viewWidth{ 350.f * sceneContext.aspectRatio };
+	constexpr float viewHeight{ 350.f };
 	constexpr float nearZ{ 0.1f };
 	constexpr float farZ{ 500.f };
 

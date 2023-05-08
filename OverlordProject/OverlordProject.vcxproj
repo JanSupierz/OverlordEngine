@@ -93,6 +93,9 @@
     <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Materials\Shadow\ColorMaterial_Shadow.cpp" />
+    <ClCompile Include="Materials\Shadow\ColorMaterial_Shadow_Skinned.cpp" />
+    <ClCompile Include="Scenes\BombermanScene.cpp" />
     <ClCompile Include="Materials\DiffuseMaterial_Skinned.cpp" />
     <ClCompile Include="Materials\Shadow\DiffuseMaterial_Shadow.cpp" />
     <ClCompile Include="Materials\Shadow\DiffuseMaterial_Shadow_Skinned.cpp" />
@@ -142,6 +145,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Materials\Shadow\ColorMaterial_Shadow.h" />
+    <ClInclude Include="Materials\Shadow\ColorMaterial_Shadow_Skinned.h" />
+    <ClInclude Include="Scenes\BombermanScene.h" />
     <ClInclude Include="Materials\DiffuseMaterial_Skinned.h" />
     <ClInclude Include="Materials\Shadow\DiffuseMaterial_Shadow.h" />
     <ClInclude Include="Materials\Shadow\DiffuseMaterial_Shadow_Skinned.h" />
