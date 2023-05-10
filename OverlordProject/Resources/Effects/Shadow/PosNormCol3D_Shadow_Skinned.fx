@@ -70,7 +70,7 @@ VS_OUTPUT VS(VS_INPUT input){
 
 	//Pass to output
 	output.pos = mul(finalPosition, gWorldViewProj);
-	output.normal = normalize(mul(finalNormal, (float3x3)gWorld));
+	output.normal = -normalize(mul(finalNormal, (float3x3)gWorld));
 
 	//Calculate light space position
 	output.lPos = mul(finalPosition, gWorldViewProj_Light);

@@ -37,8 +37,6 @@ private:
 
 	const float m_MaxCameraHeight{ 200.f };
 
-	ModelAnimator* pAnimator{};
-
 	int m_AnimationClipId{ 0 };
 	float m_AnimationSpeed{ 1.f };
 

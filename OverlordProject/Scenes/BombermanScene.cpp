@@ -21,12 +21,6 @@ BombermanScene::BombermanScene() :
 
 BombermanScene::~BombermanScene()
 {
-	for (UINT i{ 0 }; i < m_ClipCount; ++i)
-	{
-		delete[] m_ClipNames[i];
-	}
-
-	delete[] m_ClipNames;
 }
 
 void BombermanScene::Initialize()
@@ -70,6 +64,14 @@ void BombermanScene::Initialize()
 	AddChild(m_pFixedCamera);
 	
 	SetActiveCamera(m_pFixedCamera->GetComponent<CameraComponent>());
+
+	const auto pWhiteMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
+	pWhiteMaterial->SetColor(DirectX::Colors::White);
+
+	auto pObject = AddChild(new GameObject);
+	auto pModel = pObject->AddComponent(new ModelComponent(L"Meshes/Bonus.ovm"));
+	pModel->SetMaterial(pWhiteMaterial);
+	pModel->GetTransform()->Scale(0.1f);
 }
 
 void BombermanScene::Update()
@@ -85,38 +87,38 @@ void BombermanScene::Draw()
 
 void BombermanScene::OnGUI()
 {
-	ImGui::Text("This only activates if\n SceneSettings.enableOnGUI is True.\n\n");
-	ImGui::Text("Use ImGui to add custom\n controllable scene parameters!");
-	ImGui::ColorEdit3("Demo ClearColor", &m_SceneContext.settings.clearColor.x, ImGuiColorEditFlags_NoInputs);
-	
-	if (ImGui::Button(pAnimator->IsPlaying() ? "PAUSE" : "PLAY"))
-	{
-		if (pAnimator->IsPlaying())pAnimator->Pause();
-		else pAnimator->Play();
-	}
-	
-	if (ImGui::Button("RESET"))
-	{
-		pAnimator->Reset();
-	}
-	
-	ImGui::Dummy({ 0,5 });
-	
-	bool reversed = pAnimator->IsReversed();
-	if (ImGui::Checkbox("Play Reversed", &reversed))
-	{
-		pAnimator->SetPlayReversed(reversed);
-	}
-	
-	if (ImGui::ListBox("Animation Clip", &m_AnimationClipId, m_ClipNames, static_cast<int>(m_ClipCount)))
-	{
-		pAnimator->SetAnimation(m_AnimationClipId);
-	}
-	
-	if (ImGui::SliderFloat("Animation Speed", &m_AnimationSpeed, 0.f, 4.f))
-	{
-		pAnimator->SetAnimationSpeed(m_AnimationSpeed);
-	}
+	//ImGui::Text("This only activates if\n SceneSettings.enableOnGUI is True.\n\n");
+	//ImGui::Text("Use ImGui to add custom\n controllable scene parameters!");
+	//ImGui::ColorEdit3("Demo ClearColor", &m_SceneContext.settings.clearColor.x, ImGuiColorEditFlags_NoInputs);
+	//
+	//if (ImGui::Button(pAnimator->IsPlaying() ? "PAUSE" : "PLAY"))
+	//{
+	//	if (pAnimator->IsPlaying())pAnimator->Pause();
+	//	else pAnimator->Play();
+	//}
+	//
+	//if (ImGui::Button("RESET"))
+	//{
+	//	pAnimator->Reset();
+	//}
+	//
+	//ImGui::Dummy({ 0,5 });
+	//
+	//bool reversed = pAnimator->IsReversed();
+	//if (ImGui::Checkbox("Play Reversed", &reversed))
+	//{
+	//	pAnimator->SetPlayReversed(reversed);
+	//}
+	//
+	//if (ImGui::ListBox("Animation Clip", &m_AnimationClipId, m_ClipNames, static_cast<int>(m_ClipCount)))
+	//{
+	//	pAnimator->SetAnimation(m_AnimationClipId);
+	//}
+	//
+	//if (ImGui::SliderFloat("Animation Speed", &m_AnimationSpeed, 0.f, 4.f))
+	//{
+	//	pAnimator->SetAnimationSpeed(m_AnimationSpeed);
+	//}
 }
 
 void BombermanScene::InitArena()
@@ -294,6 +296,7 @@ void BombermanScene::InitPlayer(int index,
 	characterDesc.actionId_MoveBackward = ToInputId(index, CharacterMoveBackward);
 	characterDesc.actionId_MoveLeft = ToInputId(index, CharacterMoveLeft);
 	characterDesc.actionId_MoveRight = ToInputId(index, CharacterMoveRight);
+	characterDesc.actionId_PlaceBomb = ToInputId(index, CharacterPlaceBomb);
 	characterDesc.gamepadIndex = gamepadIndex;
 	characterDesc.controller.height = playerHeight;
 	characterDesc.controller.radius = playerHeight / 3.f;
@@ -301,51 +304,49 @@ void BombermanScene::InitPlayer(int index,
 	characterDesc.maxMoveSpeed = 3.f * playerHeight;
 	characterDesc.rotationSpeed = 10.f;
 
+	characterDesc.clipId_Death = 1;
+	characterDesc.clipId_PlaceBomb = 2;
+	characterDesc.clipId_Floating = 3;
+	characterDesc.clipId_Idle = 4;
+	characterDesc.clipId_Walking = 6;
+
+	//0 -> dancing
+	//1 -> death
+	//2 -> place bomb
+	//3 -> floating
+	//4 -> idle
+	//5 -> loose
+	//6 -> running
+
 	m_pCharacters[index] = AddChild(new Character(characterDesc));
 	m_pCharacters[index]->GetTransform()->Translate(0, 20.f, 0.f);
 
 	//Animation
 	const auto pSkinnedMaterial{ pCharacterMaterial };
 
-	auto pModelObject = m_pCharacters[index]->AddChild(new GameObject);
-	
+	const auto pModelObject{ m_pCharacters[index]->AddChild(new GameObject()) };
+
 	const auto pModelAnimated = pModelObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/Player.ovm"));
 	pModelAnimated->SetMaterial(pSkinnedMaterial);
+	m_pCharacters[index]->SetAnimator(pModelAnimated->GetAnimator());
 
-	{
-		const auto transform{ pModelAnimated->GetTransform() };
-		transform->Scale(animationMeshScale);
-		transform->Translate(0.f, animationMeshOffset, 0.f);
+	const auto transform{ pModelAnimated->GetTransform() };
+	transform->Scale(animationMeshScale);
+	transform->Translate(0.f, animationMeshOffset, 0.f);
 
-		pAnimator = pModelAnimated->GetAnimator();
-		pAnimator->SetAnimation(m_AnimationClipId);
-		pAnimator->SetAnimationSpeed(m_AnimationSpeed);
-
-		pModelAnimated->SetMaterial(pDetailMaterial, 0);
-		pModelAnimated->SetMaterial(pBodyMaterial, 1);
-		pModelAnimated->SetMaterial(pHandsMaterial, 2);
-		pModelAnimated->SetMaterial(pHandsMaterial, 3);
-		pModelAnimated->SetMaterial(pCharacterMaterial, 4);
-		pModelAnimated->SetMaterial(pDetailMaterial, 5);
-		pModelAnimated->SetMaterial(pDetailMaterial, 6);
-		pModelAnimated->SetMaterial(pCharacterMaterial, 7);
-		pModelAnimated->SetMaterial(pCharacterMaterial, 8);
-		pModelAnimated->SetMaterial(pCharacterMaterial, 9);
-		pModelAnimated->SetMaterial(pHandsMaterial, 10);
-		pModelAnimated->SetMaterial(pSkinMaterial, 11);
-		pModelAnimated->SetMaterial(pGoldMaterial, 12);
-
-		////Gather Clip Names
-		//m_ClipCount = pAnimator->GetClipCount();
-		//m_ClipNames = new char* [m_ClipCount];
-		//for (UINT i{ 0 }; i < m_ClipCount; ++i)
-		//{
-		//	auto clipName = StringUtil::utf8_encode(pAnimator->GetClip(static_cast<int>(i)).name);
-		//	const auto clipSize = clipName.size();
-		//	m_ClipNames[i] = new char[clipSize + 1];
-		//	strncpy_s(m_ClipNames[i], clipSize + 1, clipName.c_str(), clipSize);
-		//}
-	}
+	pModelAnimated->SetMaterial(pDetailMaterial, 0);
+	pModelAnimated->SetMaterial(pBodyMaterial, 1);
+	pModelAnimated->SetMaterial(pHandsMaterial, 2);
+	pModelAnimated->SetMaterial(pHandsMaterial, 3);
+	pModelAnimated->SetMaterial(pCharacterMaterial, 4);
+	pModelAnimated->SetMaterial(pDetailMaterial, 5);
+	pModelAnimated->SetMaterial(pDetailMaterial, 6);
+	pModelAnimated->SetMaterial(pCharacterMaterial, 7);
+	pModelAnimated->SetMaterial(pCharacterMaterial, 8);
+	pModelAnimated->SetMaterial(pCharacterMaterial, 9);
+	pModelAnimated->SetMaterial(pHandsMaterial, 10);
+	pModelAnimated->SetMaterial(pSkinMaterial, 11);
+	pModelAnimated->SetMaterial(pGoldMaterial, 12);
 
 	//Input
 	auto inputAction = InputAction(ToInputId(index, CharacterMoveLeft), InputState::down, -1, -1, XINPUT_GAMEPAD_DPAD_LEFT, gamepadIndex);

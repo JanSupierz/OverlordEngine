@@ -1,4 +1,6 @@
 #pragma once
+class ModelAnimator;
+
 struct CharacterDesc
 {
 	CharacterDesc(
@@ -26,7 +28,20 @@ struct CharacterDesc
 	int actionId_MoveRight{ -1 };
 	int actionId_MoveForward{ -1 };
 	int actionId_MoveBackward{ -1 };
+	int actionId_PlaceBomb{ -1 };
 	GamepadIndex gamepadIndex{ 0 };
+
+	UINT currentClipId{ 0 };
+	UINT clipId_Walking{ 0 };
+	UINT clipId_Idle{ 0 };
+	UINT clipId_Floating{ 0 };
+	UINT clipId_Death{ 0 };
+	UINT clipId_PlaceBomb{ 0 };
+};
+
+enum class CharacterAction
+{
+	running, standing, placingBomb, stopPlacing
 };
 
 class Character : public GameObject
@@ -41,10 +56,11 @@ public:
 	Character& operator=(Character&& other) noexcept = delete;
 
 	void DrawImGui();
-
+	void SetAnimator(ModelAnimator* pAnimator);
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
+	void UpdateAnimations(const SceneContext& sceneContext);
 
 private:
 	ControllerComponent* m_pControllerComponent{};
@@ -54,8 +70,11 @@ private:
 	float m_MoveAcceleration{},						//Acceleration required to reach maxMoveVelocity after 1 second (maxMoveVelocity / moveAccelerationTime)
 		m_FallAcceleration{},						//Acceleration required to reach maxFallVelocity after 1 second (maxFallVelocity / fallAccelerationTime)
 		m_MoveSpeed{};								//MoveSpeed > Horizontal Velocity = MoveDirection * MoveVelocity (= TotalVelocity.xz)
+	float m_AnimationTimeLeft{};
 
 	XMFLOAT3 m_TotalVelocity{};						//TotalVelocity with X/Z for Horizontal Movement AND Y for Vertical Movement (fall/jump)
 	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
+	ModelAnimator* m_pAnimator{ nullptr };
+	CharacterAction m_CurrentAction{ CharacterAction::standing };
 };
 

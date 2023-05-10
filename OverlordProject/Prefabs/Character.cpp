@@ -15,132 +15,242 @@ void Character::Initialize(const SceneContext& /*sceneContext*/)
 
 void Character::Update(const SceneContext& sceneContext)
 {
-		constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
-		const float elapsedSec{ sceneContext.pGameTime->GetElapsed() };
-		
-		//***************
-		//HANDLE INPUT
-
-		XMFLOAT2 move{ 0.f,0.f };
-		if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveForward))
+	constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
+	const float elapsedSec{ sceneContext.pGameTime->GetElapsed() };
+	
+	//***************
+	//HANDLE INPUT
+	switch (m_CurrentAction)
+	{
+		case CharacterAction::running:
+		case CharacterAction::standing:
 		{
-			move.y = 1.f;
-		}
-		else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveBackward))
-		{
-			move.y = -1.f;
-		}
+			bool placeBombTriggered{ sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_PlaceBomb) };
 
-		//Optional: if move.y is near zero (abs(move.y) < epsilon), you could use the ThumbStickPosition.y for movement
-		if (abs(move.y) < epsilon)
-		{
-			move.y = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).y;
-		}
-
-		//move.x should contain a 1 (Right) or -1 (Left) based on the active input (check corresponding actionId in m_CharacterDesc)
-		if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveRight))
-		{
-			move.x = 1.f;
-		}
-		else if(sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveLeft))
-		{
-			move.x = -1.f;
-		}
-
-		//Optional: if move.x is near zero (abs(move.x) < epsilon), you could use the Left ThumbStickPosition.x for movement
-		if (abs(move.x) < epsilon)
-		{
-			move.x = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).x;
-		}
-
-		//********
-		//MOVEMENT
-		const XMVECTOR worldForward{ 0.f,0.f,1.f };
-		const XMVECTOR worldRight{ 1.f,0.f,0.f };
-
-		//## Horizontal Velocity (Forward/Backward/Right/Left)
-		//Calculate the current move acceleration for this frame (m_MoveAcceleration * ElapsedTime)
-		const float acceleration{ m_MoveAcceleration * sceneContext.pGameTime->GetElapsed() };
-
-		//If the character is moving (= input is pressed)
-		if (abs(move.x) > epsilon || abs(move.y) > epsilon)
-		{
-			//Calculate & Store the current direction (m_CurrentDirection) >> based on the forward/right vectors and the pressed input
-			const XMVECTOR direction{ worldForward * move.y + worldRight * move.x };
-			XMStoreFloat3(&m_CurrentDirection, direction);
-
-			//Increase the current MoveSpeed with the current Acceleration (m_MoveSpeed)
-			m_MoveSpeed += acceleration;
-
-			//Make sure the current MoveSpeed stays below the maximum MoveSpeed (CharacterDesc::maxMoveSpeed)
-			m_MoveSpeed = std::min(m_MoveSpeed, m_CharacterDesc.maxMoveSpeed);
-
-			//--- Lerp to move direction ---
-			const XMVECTOR normalizedDirection{ XMVector3Normalize(direction) };
-			const XMVECTOR playerRotation{ -XMLoadFloat3(&GetTransform()->GetForward()) };
-
-			const float angleDistanceInRadians{ XMVectorGetX(XMVector3AngleBetweenNormals(normalizedDirection, playerRotation)) };
-			const float angleDistance{ XMConvertToDegrees(angleDistanceInRadians) };
-
-			constexpr float rotationEpsilon{ 4.f };
-			if (angleDistance > rotationEpsilon)
+			XMFLOAT2 move{ 0.f,0.f };
+			if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveForward))
 			{
-				const XMVECTOR perpendicular{ -XMLoadFloat3(&GetTransform()->GetRight()) };
+				move.y = 1.f;
+			}
+			else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveBackward))
+			{
+				move.y = -1.f;
+			}
 
-				//Check sign
-				const float dot{ XMVectorGetX(XMVector3Dot(perpendicular, normalizedDirection)) };
-				const int sign{ dot > 0.f ? 1 : -1 };
+			//Optional: if move.y is near zero (abs(move.y) < epsilon), you could use the ThumbStickPosition.y for movement
+			if (abs(move.y) < epsilon)
+			{
+				move.y = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).y;
+			}
 
-				//Rotate
-				m_TotalYaw += sign * m_CharacterDesc.rotationSpeed * angleDistance * elapsedSec;
-				
-				//Prevent overflow
-				if (abs(m_TotalYaw) > 360.f)
+			//move.x should contain a 1 (Right) or -1 (Left) based on the active input (check corresponding actionId in m_CharacterDesc)
+			if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveRight))
+			{
+				move.x = 1.f;
+			}
+			else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveLeft))
+			{
+				move.x = -1.f;
+			}
+
+			//Optional: if move.x is near zero (abs(move.x) < epsilon), you could use the Left ThumbStickPosition.x for movement
+			if (abs(move.x) < epsilon)
+			{
+				move.x = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).x;
+			}
+
+			//********
+			//MOVEMENT
+			const XMVECTOR worldForward{ 0.f,0.f,1.f };
+			const XMVECTOR worldRight{ 1.f,0.f,0.f };
+
+			//## Horizontal Velocity (Forward/Backward/Right/Left)
+			//Calculate the current move acceleration for this frame (m_MoveAcceleration * ElapsedTime)
+			const float acceleration{ m_MoveAcceleration * elapsedSec };
+
+			//If the character is moving (= input is pressed)
+			if (abs(move.x) > epsilon || abs(move.y) > epsilon)
+			{
+				m_CurrentAction = CharacterAction::running;
+
+				//Calculate & Store the current direction (m_CurrentDirection) >> based on the forward/right vectors and the pressed input
+				const XMVECTOR direction{ worldForward * move.y + worldRight * move.x };
+				XMStoreFloat3(&m_CurrentDirection, direction);
+
+				//Increase the current MoveSpeed with the current Acceleration (m_MoveSpeed)
+				m_MoveSpeed += acceleration;
+
+				//Make sure the current MoveSpeed stays below the maximum MoveSpeed (CharacterDesc::maxMoveSpeed)
+				m_MoveSpeed = std::min(m_MoveSpeed, m_CharacterDesc.maxMoveSpeed);
+
+				//--- Lerp to move direction ---
+				const XMVECTOR normalizedDirection{ XMVector3Normalize(direction) };
+				const XMVECTOR playerRotation{ -XMLoadFloat3(&GetTransform()->GetForward()) };
+
+				const float angleDistanceInRadians{ XMVectorGetX(XMVector3AngleBetweenNormals(normalizedDirection, playerRotation)) };
+				const float angleDistance{ XMConvertToDegrees(angleDistanceInRadians) };
+
+				constexpr float rotationEpsilon{ 4.f };
+				if (angleDistance > rotationEpsilon)
 				{
-					m_TotalYaw -= 360.f * m_TotalYaw / abs(m_TotalYaw);
+					const XMVECTOR perpendicular{ -XMLoadFloat3(&GetTransform()->GetRight()) };
+
+					//Check sign
+					const float dot{ XMVectorGetX(XMVector3Dot(perpendicular, normalizedDirection)) };
+					const int sign{ dot > 0.f ? 1 : -1 };
+
+					//Rotate
+					m_TotalYaw += sign * m_CharacterDesc.rotationSpeed * angleDistance * elapsedSec;
+
+					//Prevent overflow
+					if (abs(m_TotalYaw) > 360.f)
+					{
+						m_TotalYaw -= 360.f * m_TotalYaw / abs(m_TotalYaw);
+					}
+
+					GetTransform()->Rotate(0.f, m_TotalYaw, 0.f);
+				}
+			}
+			else
+			{
+				//Decrease the current MoveSpeed with the current Acceleration (m_MoveSpeed)
+				m_MoveSpeed -= acceleration;
+
+				if (m_MoveSpeed <= epsilon)
+				{
+					m_CurrentAction = CharacterAction::standing;
 				}
 
-				GetTransform()->Rotate(0.f, m_TotalYaw, 0.f);
+				//Make sure the current MoveSpeed doesn't get smaller than zero
+				m_MoveSpeed = std::max(m_MoveSpeed, 0.0f);
+			}
+
+			//Calculate the horizontal velocity (m_CurrentDirection * MoveSpeed)
+			m_TotalVelocity.x = m_CurrentDirection.x * m_MoveSpeed;
+			m_TotalVelocity.z = m_CurrentDirection.z * m_MoveSpeed;
+
+			//If the Controller Component is NOT grounded (= freefall)
+			if (!(m_pControllerComponent->GetCollisionFlags() & PxControllerCollisionFlag::eCOLLISION_DOWN))
+			{
+				//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
+				m_TotalVelocity.y -= m_FallAcceleration * elapsedSec;
+
+				//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
+				m_TotalVelocity.y = std::max(m_TotalVelocity.y, -m_CharacterDesc.maxFallSpeed);
+			}
+			else
+			{
+				//m_TotalVelocity.y is zero
+				m_TotalVelocity.y = 0.f;
+
+				if (placeBombTriggered)
+				{
+					m_CurrentAction = CharacterAction::placingBomb;
+				}
+			}
+
+			//************
+			//DISPLACEMENT
+
+			m_pControllerComponent->Move(XMFLOAT3{ m_TotalVelocity.x * elapsedSec ,m_TotalVelocity.y * elapsedSec ,m_TotalVelocity.z * elapsedSec });
+		}
+		break;
+		default:
+			break;
+	}
+
+	//Animations
+	UpdateAnimations(sceneContext);
+}
+
+void Character::UpdateAnimations(const SceneContext& sceneContext)
+{
+	constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
+	constexpr float placeBombAnimDuration{ 0.9f }; //Constant that can be used to compare if a float is near zero
+
+	UINT clipId{ 0 };
+
+	switch (m_CurrentAction)
+	{
+		case CharacterAction::running:
+		{
+			clipId = m_CharacterDesc.clipId_Walking;
+
+			if (m_CharacterDesc.currentClipId != clipId)
+			{
+				m_pAnimator->SetAnimation(clipId);
+				m_CharacterDesc.currentClipId = clipId;
+			}
+
+			m_pAnimator->SetAnimationSpeed(m_MoveSpeed / m_CharacterDesc.maxMoveSpeed);
+		}
+		break;
+
+		case CharacterAction::standing:
+		{
+			clipId = m_CharacterDesc.clipId_Idle;
+
+			if (m_CharacterDesc.currentClipId != clipId)
+			{
+				m_pAnimator->SetAnimation(clipId);
+				m_CharacterDesc.currentClipId = clipId;
+			}
+
+			m_pAnimator->SetAnimationSpeed(1.f);
+		}
+		break;
+
+		case CharacterAction::placingBomb:
+		{
+			m_AnimationTimeLeft -= sceneContext.pGameTime->GetElapsed();
+
+			clipId = m_CharacterDesc.clipId_PlaceBomb;
+
+			if (m_CharacterDesc.currentClipId != clipId)
+			{
+				m_pAnimator->SetAnimation(clipId);
+				m_pAnimator->Reset(false);
+				m_CharacterDesc.currentClipId = clipId;
+				m_AnimationTimeLeft = placeBombAnimDuration;
+			}
+
+			if (m_AnimationTimeLeft < epsilon)
+			{
+				m_AnimationTimeLeft = placeBombAnimDuration;
+				m_pAnimator->SetPlayReversed(true);
+
+				m_CurrentAction = CharacterAction::stopPlacing;
 			}
 		}
-		else
+		break;
+
+		case CharacterAction::stopPlacing:
 		{
-			//Decrease the current MoveSpeed with the current Acceleration (m_MoveSpeed)
-			m_MoveSpeed -= acceleration;
+			m_AnimationTimeLeft -= sceneContext.pGameTime->GetElapsed();
 
-			//Make sure the current MoveSpeed doesn't get smaller than zero
-			m_MoveSpeed = std::max(m_MoveSpeed, 0.0f);
+			if (m_AnimationTimeLeft < epsilon)
+			{
+				m_pAnimator->SetPlayReversed(false);
+				m_CurrentAction = CharacterAction::standing;
+			}
 		}
+		break;
 
+	default:
+		break;
+	}
 
-		//Now we can calculate the Horizontal Velocity which should be stored in m_TotalVelocity.xz
-		//Calculate the horizontal velocity (m_CurrentDirection * MoveSpeed)
-		//Set the x/z component of m_TotalVelocity (horizontal_velocity x/z)
-		//It's important that you don't overwrite the y component of m_TotalVelocity (contains the vertical velocity)
-		m_TotalVelocity.x = m_CurrentDirection.x * m_MoveSpeed;
-		m_TotalVelocity.z = m_CurrentDirection.z * m_MoveSpeed;
-
-		//If the Controller Component is NOT grounded (= freefall)
-		if (!(m_pControllerComponent->GetCollisionFlags() & PxControllerCollisionFlag::eCOLLISION_DOWN))
-		{
-			//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
-			m_TotalVelocity.y -= m_FallAcceleration * sceneContext.pGameTime->GetElapsed();
-
-			//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
-			m_TotalVelocity.y = std::max(m_TotalVelocity.y, -m_CharacterDesc.maxFallSpeed);
-		}
-		else
-		{
-			//m_TotalVelocity.y is zero
-			m_TotalVelocity.y = 0.f;
-		}
-
-		//************
-		//DISPLACEMENT
-
-		m_pControllerComponent->Move(XMFLOAT3{ m_TotalVelocity.x * elapsedSec ,m_TotalVelocity.y * elapsedSec ,m_TotalVelocity.z * elapsedSec });
+	if (!m_pAnimator->IsPlaying())
+	{
+		m_pAnimator->Play();
+	}
 }
 
 void Character::DrawImGui()
 {
+}
+
+void Character::SetAnimator(ModelAnimator* pAnimator)
+{
+	m_pAnimator = pAnimator;
 }
