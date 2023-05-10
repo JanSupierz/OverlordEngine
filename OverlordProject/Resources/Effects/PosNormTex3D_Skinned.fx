@@ -68,9 +68,8 @@ VS_OUTPUT VS(VS_INPUT input) {
 			transformedNormal += mul(input.normal, (float3x3)gBones[boneIndex]) * input.blendWeights[index];
 		}
 	}
-
+	
 	transformedPosition.w = 1.f;
-
 	output.pos = mul(transformedPosition, gWorldViewProj);
 	output.normal = normalize(mul(transformedNormal, (float3x3)gWorld));
 	output.texCoord = input.texCoord;

@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "Character.h"
+#include "Prefabs/Character.h"
 
-Character::Character(const CharacterDesc& characterDesc) :
+Character::Character(const CharacterDesc& characterDesc):
 	m_CharacterDesc{ characterDesc },
 	m_MoveAcceleration(characterDesc.maxMoveSpeed / characterDesc.moveAccelerationTime),
 	m_FallAcceleration(characterDesc.maxFallSpeed / characterDesc.fallAccelerationTime)
@@ -15,7 +15,8 @@ void Character::Initialize(const SceneContext& /*sceneContext*/)
 	//Camera
 	const auto pCamera = AddChild(new FixedCamera());
 	m_pCameraComponent = pCamera->GetComponent<CameraComponent>();
-	m_pCameraComponent->SetActive(true); //Uncomment to make this camera the active camera
+
+	m_pCameraComponent->SetActive(true);
 
 	pCamera->GetTransform()->Translate(0.f, m_CharacterDesc.controller.height * .5f, 0.f);
 }
@@ -113,7 +114,7 @@ void Character::Update(const SceneContext& sceneContext)
 
 		//## Horizontal Velocity (Forward/Backward/Right/Left)
 		//Calculate the current move acceleration for this frame (m_MoveAcceleration * ElapsedTime)
-		const float acceleration{ m_MoveAcceleration * sceneContext.pGameTime->GetElapsed() };
+		const float acceleration{ m_MoveAcceleration * elapsedSec };
 
 		//If the character is moving (= input is pressed)
 		if (abs(move.x) > epsilon || abs(move.y) > epsilon)
@@ -149,7 +150,7 @@ void Character::Update(const SceneContext& sceneContext)
 		if (!(m_pControllerComponent->GetCollisionFlags() & PxControllerCollisionFlag::eCOLLISION_DOWN))
 		{
 			//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
-			m_TotalVelocity.y -= m_FallAcceleration * sceneContext.pGameTime->GetElapsed();
+			m_TotalVelocity.y -= m_FallAcceleration * elapsedSec;
 
 			//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
 			m_TotalVelocity.y = std::max(m_TotalVelocity.y, -m_CharacterDesc.maxFallSpeed);
