@@ -143,7 +143,7 @@ void ParticleEmitterComponent::SpawnParticle(Particle& p)
 	};
 
 	const XMVECTOR& offset{ XMVector3Normalize(randomDirection) * MathHelper::randF(m_EmitterSettings.minEmitterRadius, m_EmitterSettings.maxEmitterRadius) };
-	XMStoreFloat3(&p.vertexInfo.Position, XMLoadFloat3(&GetTransform()->GetPosition()) + offset);
+	XMStoreFloat3(&p.vertexInfo.Position, XMLoadFloat3(&GetTransform()->GetWorldPosition()) + offset);
 
 	//Size
 	p.vertexInfo.Size = MathHelper::randF(m_EmitterSettings.minSize, m_EmitterSettings.maxSize);
