@@ -214,7 +214,7 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 				m_AnimationTimeLeft = placeBombAnimDuration;
 			}
 
-			if (m_AnimationTimeLeft < epsilon)
+			if (m_AnimationTimeLeft < -epsilon)
 			{
 				m_AnimationTimeLeft = placeBombAnimDuration;
 				m_pAnimator->SetPlayReversed(true);

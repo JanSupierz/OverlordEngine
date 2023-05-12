@@ -2,6 +2,34 @@
 class Character;
 class ColorMaterial_Shadow_Skinned;
 
+struct PlayerDesc
+{
+	PlayerDesc(int playerIndex, PxMaterial* pPxCharacterMaterial)
+		:pPxMaterial{ pPxCharacterMaterial }, index{ playerIndex }
+	{
+	}
+
+	ColorMaterial_Shadow_Skinned* pMainMaterial{};
+	ColorMaterial_Shadow_Skinned* pShirtMaterial{};
+	ColorMaterial_Shadow_Skinned* pBlackMaterial{};
+	ColorMaterial_Shadow_Skinned* pGlovesMaterial{};
+	ColorMaterial_Shadow_Skinned* pSkinMaterial{};
+	ColorMaterial_Shadow_Skinned* pGoldMaterial{};
+	PxMaterial* pPxMaterial;
+
+	float spriteOffsetX{}, spriteOffsetY{};
+	float spritePivotX{ 0.f }, spritePivotY{ 0.f };
+	int index{ 0 };
+
+	std::wstring spriteName{ L"Icon_White"};
+
+	int clipId_Death{ 1 };
+	int clipId_PlaceBomb{ 2 };
+	int clipId_Floating{ 3 };
+	int clipId_Idle{ 4 };
+	int clipId_Walking{ 6 };
+};
+
 class BombermanScene final : public GameScene
 {
 public:
@@ -22,14 +50,7 @@ protected:
 private:
 	void InitArena();
 
-	void InitPlayer(int index, 
-		ColorMaterial_Shadow_Skinned* pCharacterMaterial, 
-		ColorMaterial_Shadow_Skinned* pBodyMaterial, 
-		ColorMaterial_Shadow_Skinned* pDetailMaterial, 
-		ColorMaterial_Shadow_Skinned* pHandsMaterial,
-		ColorMaterial_Shadow_Skinned* pSkinMaterial,
-		ColorMaterial_Shadow_Skinned* pGoldMaterial,
-		PxMaterial* pDefaultMaterial);
+	void InitPlayer(const PlayerDesc& playerDesc);
 
 	int ToInputId(int index, int basicInputId) const;
 

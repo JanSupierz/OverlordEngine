@@ -143,7 +143,7 @@ void ParticleEmitterComponent::SpawnParticle(Particle& p)
 	};
 
 	const XMVECTOR& offset{ XMVector3Normalize(randomDirection) * MathHelper::randF(m_EmitterSettings.minEmitterRadius, m_EmitterSettings.maxEmitterRadius) };
-	XMStoreFloat3(&p.vertexInfo.Position, XMLoadFloat3(&GetTransform()->GetPosition()) + offset);
+	XMStoreFloat3(&p.vertexInfo.Position, XMLoadFloat3(&GetTransform()->GetWorldPosition()) + offset);
 
 	//Size
 	p.vertexInfo.Size = MathHelper::randF(m_EmitterSettings.minSize, m_EmitterSettings.maxSize);
@@ -161,7 +161,7 @@ void ParticleEmitterComponent::SpawnParticle(Particle& p)
 void ParticleEmitterComponent::PostDraw(const SceneContext& sceneContext)
 {
 	//Set variables
-	m_pParticleMaterial->SetVariable_Matrix(L"gWorldViewProj", sceneContext.pCamera->GetViewProjection());
+	m_pParticleMaterial->SetVariable_Matrix(L"gWorldViewProj", sceneContext.pCamera->GetViewProjection() );
 	m_pParticleMaterial->SetVariable_Matrix(L"gViewInverse", sceneContext.pCamera->GetViewInverse());
 	m_pParticleMaterial->SetVariable_Texture(L"gParticleTexture", m_pParticleTexture->GetShaderResourceView());
 
