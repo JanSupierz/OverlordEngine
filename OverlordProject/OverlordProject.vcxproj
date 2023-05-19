@@ -93,15 +93,18 @@
     <PostBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Bomberman\Bomb.cpp" />
+    <ClCompile Include="Bomberman\Grid.cpp" />
+    <ClCompile Include="Bomberman\Fire.cpp" />
     <ClCompile Include="Materials\Shadow\ColorMaterial_Shadow.cpp" />
     <ClCompile Include="Materials\Shadow\ColorMaterial_Shadow_Skinned.cpp" />
-    <ClCompile Include="Scenes\BombermanScene.cpp" />
+    <ClCompile Include="Bomberman\BombermanScene.cpp" />
     <ClCompile Include="Materials\DiffuseMaterial_Skinned.cpp" />
     <ClCompile Include="Materials\Shadow\DiffuseMaterial_Shadow.cpp" />
     <ClCompile Include="Materials\Shadow\DiffuseMaterial_Shadow_Skinned.cpp" />
     <ClCompile Include="Prefabs\BoneObject.cpp" />
     <ClCompile Include="Materials\DiffuseMaterial.cpp" />
-    <ClCompile Include="Prefabs\Character.cpp" />
+    <ClCompile Include="Bomberman\Character.cpp" />
     <ClCompile Include="Scenes\Week 4\ModelTestScene.cpp" />
     <ClCompile Include="Scenes\Week 3\ComponentTestScene.cpp" />
     <ClCompile Include="Prefabs\CubePrefab.cpp" />
@@ -146,15 +149,18 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bomberman\Bomb.h" />
+    <ClInclude Include="Bomberman\Grid.h" />
+    <ClInclude Include="Bomberman\Fire.h" />
     <ClInclude Include="Materials\Shadow\ColorMaterial_Shadow.h" />
     <ClInclude Include="Materials\Shadow\ColorMaterial_Shadow_Skinned.h" />
-    <ClInclude Include="Scenes\BombermanScene.h" />
+    <ClInclude Include="Bomberman\BombermanScene.h" />
     <ClInclude Include="Materials\DiffuseMaterial_Skinned.h" />
     <ClInclude Include="Materials\Shadow\DiffuseMaterial_Shadow.h" />
     <ClInclude Include="Materials\Shadow\DiffuseMaterial_Shadow_Skinned.h" />
     <ClInclude Include="Prefabs\BoneObject.h" />
     <ClInclude Include="Materials\DiffuseMaterial.h" />
-    <ClInclude Include="Prefabs\Character.h" />
+    <ClInclude Include="Bomberman\Character.h" />
     <ClInclude Include="Scenes\Week 4\ModelTestScene.h" />
     <ClInclude Include="Scenes\Week 3\ComponentTestScene.h" />
     <ClInclude Include="Prefabs\CubePrefab.h" />

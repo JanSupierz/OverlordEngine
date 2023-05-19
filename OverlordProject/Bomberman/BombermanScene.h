@@ -1,6 +1,8 @@
 #pragma once
 class Character;
 class ColorMaterial_Shadow_Skinned;
+class DiffuseMaterial_Shadow;
+class Grid;
 
 struct PlayerDesc
 {
@@ -41,6 +43,9 @@ public:
 	BombermanScene& operator=(const BombermanScene& other) = delete;
 	BombermanScene& operator=(BombermanScene&& other) noexcept = delete;
 
+	static void AddGameObject(GameObject* pGameObject);
+	static void RemoveGameObject(GameObject* pGameObject);
+
 protected:
 	void Initialize() override;
 	void Update() override;
@@ -49,7 +54,7 @@ protected:
 
 private:
 	void InitArena();
-
+	void CreateCube(int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset = 0.f, float scale = 1.f, bool disableRigid = false);
 	void InitPlayer(const PlayerDesc& playerDesc);
 
 	int ToInputId(int index, int basicInputId) const;
@@ -75,7 +80,13 @@ private:
 		CharacterPlaceBomb,
 	};
 
+	const float m_CubeSize;
 	std::vector<Character*> m_pCharacters{};
+	std::unique_ptr<Grid> m_pGrid;
+
+	static std::vector<GameObject*> s_pObjectsToAdd;
+	static std::vector<GameObject*> s_pObjectsToRemove;
+	static bool s_CheckVectors;
 };
 
 

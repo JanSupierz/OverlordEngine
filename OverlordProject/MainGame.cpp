@@ -60,7 +60,7 @@
 #endif
 
 #ifdef Bomberman
-#include "Scenes/BombermanScene.h"
+#include "Bomberman/BombermanScene.h"
 #endif
 
 #ifdef MILESTONE_1

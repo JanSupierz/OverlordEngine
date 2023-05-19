@@ -1,5 +1,6 @@
 #pragma once
 class ModelAnimator;
+class Grid;
 
 struct CharacterDesc
 {
@@ -47,7 +48,7 @@ enum class CharacterAction
 class Character : public GameObject
 {
 public:
-	Character(const CharacterDesc& characterDesc);
+	Character(const CharacterDesc& characterDesc, Grid* pGrid);
 	~Character() override = default;
 
 	Character(const Character& other) = delete;
@@ -57,12 +58,16 @@ public:
 
 	void DrawImGui();
 	void SetAnimator(ModelAnimator* pAnimator);
+
+	int GetIndex() const;
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
 	void UpdateAnimations(const SceneContext& sceneContext);
 
 private:
+	void PlaceBomb() const;
+
 	ControllerComponent* m_pControllerComponent{};
 
 	CharacterDesc m_CharacterDesc;
@@ -76,5 +81,6 @@ private:
 	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
 	ModelAnimator* m_pAnimator{ nullptr };
 	CharacterAction m_CurrentAction{ CharacterAction::standing };
+	Grid* m_pGrid;
 };
 

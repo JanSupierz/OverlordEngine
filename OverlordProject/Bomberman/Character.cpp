@@ -1,8 +1,11 @@
 #include "stdafx.h"
-#include "Prefabs/Character.h"
+#include "Bomberman/Character.h"
+#include "Bomberman/Bomb.h"
+#include "Bomberman/Grid.h"
+#include "BombermanScene.h"
 
-Character::Character(const CharacterDesc& characterDesc) :
-	m_CharacterDesc{ characterDesc },
+Character::Character(const CharacterDesc& characterDesc, Grid* pGrid) :
+	m_CharacterDesc{ characterDesc }, m_pGrid{ pGrid }, 
 	m_MoveAcceleration(characterDesc.maxMoveSpeed / characterDesc.moveAccelerationTime),
 	m_FallAcceleration(characterDesc.maxFallSpeed / characterDesc.fallAccelerationTime)
 {}
@@ -85,7 +88,7 @@ void Character::Update(const SceneContext& sceneContext)
 
 				//--- Lerp to move direction ---
 				const XMVECTOR normalizedDirection{ XMVector3Normalize(direction) };
-				const XMVECTOR playerRotation{ -XMLoadFloat3(&GetTransform()->GetForward()) };
+				const XMVECTOR playerRotation{ XMLoadFloat3(&GetTransform()->GetForward()) };
 
 				const float angleDistanceInRadians{ XMVectorGetX(XMVector3AngleBetweenNormals(normalizedDirection, playerRotation)) };
 				const float angleDistance{ XMConvertToDegrees(angleDistanceInRadians) };
@@ -93,7 +96,7 @@ void Character::Update(const SceneContext& sceneContext)
 				constexpr float rotationEpsilon{ 4.f };
 				if (angleDistance > rotationEpsilon)
 				{
-					const XMVECTOR perpendicular{ -XMLoadFloat3(&GetTransform()->GetRight()) };
+					const XMVECTOR perpendicular{ XMLoadFloat3(&GetTransform()->GetRight()) };
 
 					//Check sign
 					const float dot{ XMVectorGetX(XMVector3Dot(perpendicular, normalizedDirection)) };
@@ -232,6 +235,8 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 			{
 				m_pAnimator->SetPlayReversed(false);
 				m_CurrentAction = CharacterAction::standing;
+
+				PlaceBomb();
 			}
 		}
 		break;
@@ -246,6 +251,28 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 	}
 }
 
+void Character::PlaceBomb() const
+{
+	const auto transform{ GetTransform() };
+	XMFLOAT3 worldPos{ transform->GetWorldPosition() };
+	XMVECTOR forwardOffset{ XMLoadFloat3(&transform->GetForward()) * m_pGrid->GetCellSize() * 0.5f };
+	XMVECTOR currentPosition{ XMLoadFloat3(&transform->GetWorldPosition()) };
+
+	XMFLOAT3 bombPosition{};
+	XMStoreFloat3(&bombPosition, currentPosition + forwardOffset);
+
+	Node* pNode{ m_pGrid->GetNode(XMFLOAT2{bombPosition.x, bombPosition.z}) };
+
+	//If node in front of you is blocked
+	if (!pNode || (pNode && pNode->IsBlocked()))
+	{
+		//Spawn the bomb in your cell
+		pNode = m_pGrid->GetNode(XMFLOAT2{ worldPos.x, worldPos.z });
+	}
+
+	BombermanScene::AddGameObject(new Bomb(pNode->GetCol(), pNode->GetRow(), this, m_pGrid));
+}
+
 void Character::DrawImGui()
 {
 }
@@ -253,4 +280,9 @@ void Character::DrawImGui()
 void Character::SetAnimator(ModelAnimator* pAnimator)
 {
 	m_pAnimator = pAnimator;
+}
+
+int Character::GetIndex() const
+{
+	return static_cast<int>(m_CharacterDesc.gamepadIndex);
 }

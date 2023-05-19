@@ -12,16 +12,46 @@
 #include "Materials/Shadow/DiffuseMaterial_Shadow_Skinned.h"
 #include "Materials/Shadow/ColorMaterial_Shadow.h"
 
-#include "Prefabs/Character.h"
+#include "Bomberman/Character.h"
+#include "Bomberman/Grid.h"
+#include "Bomberman/Bomb.h"
+#include "Bomberman/Fire.h"
+
+std::vector<GameObject*> BombermanScene::s_pObjectsToAdd{};
+std::vector<GameObject*> BombermanScene::s_pObjectsToRemove{};
+bool BombermanScene::s_CheckVectors{ false };
 
 BombermanScene::BombermanScene() :
-	GameScene(L"BombermanScene") 
+	GameScene(L"BombermanScene"), m_CubeSize{ 10.f }, 
+	m_pGrid{ std::move(std::make_unique<Grid>(15, 15, m_CubeSize))
+}
 {
 	m_pCharacters.resize(4);
 }
 
 BombermanScene::~BombermanScene()
 {
+	for (GameObject* pObject : s_pObjectsToAdd)
+	{
+		delete pObject;
+	}
+
+	for (GameObject* pObject : s_pObjectsToRemove)
+	{
+		delete pObject;
+	}
+}
+
+void BombermanScene::AddGameObject(GameObject* pGameObject)
+{
+	s_pObjectsToAdd.push_back(pGameObject);
+	s_CheckVectors = true;
+}
+
+void BombermanScene::RemoveGameObject(GameObject* pGameObject)
+{
+	s_pObjectsToRemove.push_back(pGameObject);
+	s_CheckVectors = true;
 }
 
 void BombermanScene::Initialize()
@@ -50,10 +80,10 @@ void BombermanScene::Initialize()
 	
 		const auto pSkinMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
 		pSkinMaterial->SetColor(DirectX::Colors::Bisque);
-	
+		
 		auto& physX = PxGetPhysics();
 		auto pDefaultMaterial = physX.createMaterial(0.5f, 0.5f, 0.1f);
-	
+
 		InitArena();
 		PlayerDesc playerDesc{ 0,pDefaultMaterial };
 		playerDesc.pShirtMaterial = pBlueMaterial;
@@ -78,45 +108,29 @@ void BombermanScene::Initialize()
 	AddChild(m_pFixedCamera);
 	
 	SetActiveCamera(m_pFixedCamera->GetComponent<CameraComponent>());
-	
-	const auto pBombMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
-	pBombMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
-
-	auto pObject = AddChild(new GameObject);
-	auto pModel = pObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/Bomb.ovm"));
-	pModel->SetMaterial(pBombMaterial);
-
-	pObject->GetTransform()->Translate(10.f, 10.f, 0.f);
-	pObject->GetTransform()->Scale(10.f);
-
-	//Particle System
-	ParticleEmitterSettings settings{};
-	settings.velocity = { 0.f,6.f,0.f };
-	settings.minSize = 1.f;
-	settings.maxSize = 2.f;
-	settings.minEnergy = 1.f;
-	settings.maxEnergy = 2.f;
-	settings.minScale = 3.5f;
-	settings.maxScale = 5.5f;
-	settings.minEmitterRadius = .2f;
-	settings.maxEmitterRadius = .5f;
-	settings.color = { 1.f,1.f,1.f, .6f };
-
-	const auto pVFX = pObject->AddChild(new GameObject);
-	pVFX->GetTransform()->Translate(0.2f, 1.1f, 0.1f);
-	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200));
 }
-
 
 void BombermanScene::Update()
 {
-	
+	if (s_CheckVectors)
+	{
+		for (auto pObject : s_pObjectsToAdd)
+		{
+			AddChild(pObject);
+		}
+
+		for (auto pObject : s_pObjectsToRemove)
+		{
+			RemoveChild(pObject, true);
+		}
+
+		s_pObjectsToAdd.clear();
+		s_pObjectsToRemove.clear();
+	}
 }
 
 void BombermanScene::Draw()
 {
-	//Optional
-	//ShadowMapRenderer::Get()->Debug_DrawDepthSRV({ m_SceneContext.windowWidth - 10.f, 10.f }, { 0.5f, 0.5f }, { 1.f,0.f });
 }
 
 void BombermanScene::OnGUI()
@@ -155,12 +169,57 @@ void BombermanScene::OnGUI()
 	//}
 }
 
+void BombermanScene::CreateCube(int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset, float scale, bool disableRigidBody)
+{
+	const float cubeDimensions{ m_CubeSize * scale };
+	const float halfCube{ cubeDimensions * 0.5f };
+
+	Node* pNode{ m_pGrid->GetNode(col, row) };
+
+	//Blocks above ground are blocking the player
+	if (height == 1)
+	pNode->SetBlocked(true);
+
+	//Translate to the node position
+	auto pObject{ AddChild(new GameObject) };
+	const auto transform{ pObject->GetTransform() };
+	const XMFLOAT2 nodePos{ pNode->GetWorldPos() };
+
+	transform->Translate(nodePos.x, m_CubeSize * height + heightOffset, nodePos.y);
+	transform->Scale(cubeDimensions);
+
+	//Model
+	auto pModel{ pObject->AddComponent(new ModelComponent(meshFilePath)) };
+	pModel->SetMaterial(pColorMaterial);
+
+	//Rigid body
+	if (disableRigidBody) return;
+
+	auto pRigid{ pObject->AddComponent(new RigidBodyComponent(true)) };
+
+	const auto geo{ PxBoxGeometry{ halfCube,halfCube,halfCube } };
+	pRigid->AddCollider(geo, *pStaticMaterial, false, PxTransform{ 0.f,halfCube - heightOffset,0.f });
+}
+
 void BombermanScene::InitArena()
 {
 	auto& physX = PxGetPhysics();
 	auto pBouncyMaterial = physX.createMaterial(0.f, 0.f, 1.f);
 	auto pStaticMaterial = physX.createMaterial(1.f, 1.f, 0.f);
 
+	//Set bomb materials
+	const auto pBombMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
+	pBombMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
+
+	Bomb::SetBombMaterials(pBombMaterial, pStaticMaterial);
+
+	//Set Fire materials
+	const auto pFireMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>() };
+	pFireMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
+
+	Fire::SetFireMaterials(pFireMaterial, pStaticMaterial);
+
+	//Create ground
 	auto pColorMaterialNoShadow = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
 	pColorMaterialNoShadow->SetDiffuseTexture(L"Textures/Bomberman/GroundWood.jpg");
 
@@ -174,70 +233,33 @@ void BombermanScene::InitArena()
 
 	auto pColorMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
 	pColorMaterial->SetDiffuseTexture(L"Textures/Bomberman/SideCube_Diffuse.png");
-	
-	//Cubes
-	RigidBodyComponent* pRigid{ nullptr };
-	
-	constexpr int nrCubesPerSide{ 15 };
-	constexpr float left{ -(nrCubesPerSide - 1) / 2.f };
-	constexpr float bottom{ -(nrCubesPerSide - 1) / 2.f };
-	
-	//Horizontal lines
-	constexpr float cubeDimensions{ 10.f };
-	constexpr float halfCube{ cubeDimensions * 0.5f };
-	
-	float offset{ bottom };
 
-	for (int i{}; i < 2; ++i)
+	//Side Cubes
+	std::wstring meshFilePath{ L"Meshes/Bomberman/SideCubes.ovm" };
+
+	const int nrCols{ m_pGrid->GetNrCols() };
+	for (int col{}; col < nrCols; ++col)
 	{
-		for (int index{}; index < nrCubesPerSide; ++index)
-		{
-			pObject = AddChild(new GameObject);
-			const auto transform{ pObject->GetTransform() };
-			transform->Translate((index + left) * cubeDimensions, cubeDimensions, offset * cubeDimensions);
-			transform->Scale(cubeDimensions);
-
-			pModel = pObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/SideCubes.ovm"));
-			pModel->SetMaterial(pColorMaterial);
-	
-			pRigid = pObject->AddComponent(new RigidBodyComponent(false));
-	
-			const auto geo{ PxBoxGeometry{ halfCube,halfCube,halfCube } };
-			pRigid->AddCollider(geo, *pStaticMaterial, false, PxTransform{ 0.f,halfCube,0.f });
-			pRigid->SetConstraint(RigidBodyConstraint::All, false);
-		}
-	
-		//Top
-		offset = -bottom;
-	}
-	
-	//Vertical lines
-	offset = left;
-	
-	for (int i{}; i < 2; ++i)
-	{
-		for (int index{ 1 }; index < nrCubesPerSide - 1; ++index)
-		{
-			pObject = AddChild(new GameObject);
-			const auto transform{ pObject->GetTransform() };
-			transform->Translate(offset * cubeDimensions, cubeDimensions, (bottom + index) * cubeDimensions);
-			transform->Scale(cubeDimensions);
-
-			pModel = pObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/SideCubes.ovm"));
-			pModel->SetMaterial(pColorMaterial);
-
-			pRigid = pObject->AddComponent(new RigidBodyComponent(false));
-	
-			const auto geo{ PxBoxGeometry{ halfCube, halfCube, halfCube} };
-			pRigid->AddCollider(geo, *pStaticMaterial, false, PxTransform{ 0.f,halfCube,0.f });
-			pRigid->SetConstraint(RigidBodyConstraint::All, false);
-		}
-	
-		//Right
-		offset = -left;
+		CreateCube(col, 0, 1, meshFilePath, pColorMaterial, pStaticMaterial);
 	}
 
-	//Ground
+	const int nrRows{ m_pGrid->GetNrRows() };
+	for (int col{}; col < nrCols; ++col)
+	{
+		CreateCube(col, nrRows - 1, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+	}
+
+	for (int row{ 1 }; row < nrRows - 1; ++row)
+	{
+		CreateCube(0, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+	}
+
+	for (int row{ 1 }; row < nrRows - 1; ++row)
+	{
+		CreateCube(nrCols - 1, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+	}
+
+	//Ground Cubes
 	const auto pLightColorMaterial = MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow>();
 	pLightColorMaterial->SetColor(DirectX::Colors::LightGreen);
 	
@@ -246,63 +268,35 @@ void BombermanScene::InitArena()
 	
 	bool isDark{ true };
 	
-	for (int row{}; row < nrCubesPerSide; ++row)
+	meshFilePath = L"Meshes/Bomberman/GroundCubes.ovm";
+	for (int row{}; row < nrRows; ++row)
 	{
-		for (int column{}; column < nrCubesPerSide; ++column)
+		for (int col{}; col < nrCols; ++col)
 		{
-			pObject = AddChild(new GameObject);
-			const auto transform{ pObject->GetTransform() };
-			transform->Translate((left + column) * cubeDimensions, halfCube, (bottom + row) * cubeDimensions);
-			transform->Scale(cubeDimensions);
-	
-			pModel = pObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/GroundCubes.ovm"));
-	
-			if (isDark)
-			{
-				pModel->SetMaterial(pDarkColorMaterial);
-			}
-			else
-			{
-				pModel->SetMaterial(pLightColorMaterial);
-			}
+			CreateCube(col, row, 0, meshFilePath, isDark ? pDarkColorMaterial : pLightColorMaterial, pStaticMaterial, 0.5f * m_CubeSize, 1.f, true);
 	
 			isDark = !isDark;
 		}
 	}
-
+	
 	pObject = AddChild(new GameObject);
-	pRigid = pObject->AddComponent(new RigidBodyComponent(false));
-
-	const auto geoGround{ PxBoxGeometry{ halfCube * nrCubesPerSide, cubeDimensions, halfCube * nrCubesPerSide} };
+	const auto pRigid{ pObject->AddComponent(new RigidBodyComponent(true)) };
+	
+	const auto geoGround{ PxBoxGeometry{ m_CubeSize * nrCols * 0.5f, m_CubeSize, m_CubeSize * nrRows * 0.5f} };
 	pRigid->AddCollider(geoGround, *pStaticMaterial, false, PxTransform{ 0.f,0.f,0.f });
-	pRigid->SetConstraint(RigidBodyConstraint::All, false);
-
+	
 	//Static obstacles
 	const auto pGreyColorMaterial = MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow>();
 	pGreyColorMaterial->SetColor(DirectX::Colors::DimGray);
-
+	
 	constexpr float scale{ 0.7f };
-	for (int row{ 1 }; row < nrCubesPerSide - 1; ++row)
+	meshFilePath = L"Meshes/Bomberman/CenterCubes.ovm";
+
+	for (int row{ 2 }; row < nrRows - 2; row += 2)
 	{
-		for (int column{ 1 }; column < nrCubesPerSide - 1; ++column)
+		for (int col{ 2 }; col < nrCols - 2; col += 2)
 		{
-			if (column % 2 == 0 and row % 2 == 0)
-			{
-				pObject = AddChild(new GameObject);
-				pObject->GetTransform()->Translate((left + column) * cubeDimensions, cubeDimensions + (halfCube * scale), (bottom + row) * cubeDimensions);
-				pObject->GetTransform()->Scale(scale * cubeDimensions);
-
-				pModel = pObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/CenterCubes.ovm"));
-
-				pModel->SetMaterial(pGreyColorMaterial);
-
-				pRigid = pObject->AddComponent(new RigidBodyComponent(false));
-
-				constexpr float geoScale{ scale * halfCube };
-				const auto geo{ PxBoxGeometry{ geoScale, geoScale, geoScale} };
-				pRigid->AddCollider(geo, *pStaticMaterial, false, PxTransform{ 0.f,0.f,0.f });
-				pRigid->SetConstraint(RigidBodyConstraint::All, false);
-			}
+			CreateCube(col, row, 1, meshFilePath, pGreyColorMaterial, pStaticMaterial, 0.5f * m_CubeSize * scale, scale);
 		}
 	}
 }
@@ -339,8 +333,8 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 		characterDesc.clipId_Idle = playerDesc.clipId_Idle;
 		characterDesc.clipId_Walking = playerDesc.clipId_Walking;
 
-		m_pCharacters[index] = AddChild(new Character(characterDesc));
-		m_pCharacters[index]->GetTransform()->Translate(0, 2 * playerHeight, 0.f);
+		m_pCharacters[index] = AddChild(new Character(characterDesc, m_pGrid.get()));
+		m_pCharacters[index]->GetTransform()->Translate(0.f, 2 * playerHeight, 0.f);
 	}
 
 	//Animation
@@ -354,6 +348,7 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 		const auto transform{ pModelAnimated->GetTransform() };
 		transform->Scale(animationMeshScale);
 		transform->Translate(0.f, animationMeshOffset, 0.f);
+		transform->Rotate(0.f, 180.f, 0.f);
 
 		pModelAnimated->SetMaterial(playerDesc.pBlackMaterial, 0);
 		pModelAnimated->SetMaterial(playerDesc.pShirtMaterial, 1);
@@ -389,11 +384,13 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 	}
 
 	//UI
-	const auto pSprite = AddChild(new GameObject);
-	pSprite->AddComponent(new SpriteComponent(L"Textures/Bomberman/" + playerDesc.spriteName + L".png", {playerDesc.spritePivotX, playerDesc.spritePivotY}, {1.f,1.f,1.f,0.8f}));
+	{
+		const auto pSprite = AddChild(new GameObject);
+		pSprite->AddComponent(new SpriteComponent(L"Textures/Bomberman/" + playerDesc.spriteName + L".png", { playerDesc.spritePivotX, playerDesc.spritePivotY }, { 1.f,1.f,1.f,0.8f }));
 
-	pSprite->GetTransform()->Translate(playerDesc.spriteOffsetX, playerDesc.spriteOffsetY, 0.f);
-	pSprite->GetTransform()->Scale(0.5f);
+		pSprite->GetTransform()->Translate(playerDesc.spriteOffsetX, playerDesc.spriteOffsetY, 0.f);
+		pSprite->GetTransform()->Scale(0.5f);
+	}
 }
 
 int BombermanScene::ToInputId(int index, int basicInputId) const

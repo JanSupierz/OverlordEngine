@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CharacterScene.h"
 
-#include "Prefabs/Character.h"
+#include "Bomberman/Character.h"
 #include "Materials/ColorMaterial.h"
 
 void CharacterScene::Initialize()
@@ -21,7 +21,7 @@ void CharacterScene::Initialize()
 	characterDesc.actionId_MoveRight = CharacterMoveRight;
 	characterDesc.gamepadIndex = GamepadIndex::playerOne;
 
-	m_pCharacter = AddChild(new Character(characterDesc));
+	m_pCharacter = AddChild(new Character(characterDesc, nullptr));
 	m_pCharacter->GetTransform()->Translate(0.f, 5.f, 0.f);
 
 	//Simple Level

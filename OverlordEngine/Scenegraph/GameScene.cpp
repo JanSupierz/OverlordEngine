@@ -146,6 +146,7 @@ void GameScene::RootUpdate()
 		pChild->RootUpdate(m_SceneContext);
 	}
 
+	//Proxy update
 	m_pPhysxProxy->Update(m_SceneContext);
 }
 
