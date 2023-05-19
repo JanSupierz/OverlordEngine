@@ -105,7 +105,7 @@ MaterialManager::CreateMaterial()
 	}
 	else m_MaterialsPP[newMaterialId] = pMaterial;
 
-	pMaterial->InitializeBase(m_GameContext, ToPPID(newMaterialId)); //Todo: Fix Virtual Overload Initialize
+	pMaterial->InitializeBase(m_GameContext, ToPPID(newMaterialId));
 
 	return pMaterial;
 }

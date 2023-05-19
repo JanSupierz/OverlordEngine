@@ -38,7 +38,7 @@ HRESULT RenderTarget::Create(RENDERTARGET_DESC desc)
 	CreateColor();
 	CreateDepth();
 
-	return S_OK; //TODO: change > redundant with HANDLE_ERROR macros
+	return S_OK;
 }
 
 HRESULT RenderTarget::CreateColor()

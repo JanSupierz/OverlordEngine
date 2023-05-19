@@ -22,27 +22,6 @@ void PhysXManager::Initialize()
 	}
 #endif
 
-	//TODO: Fix CudaContextManager for PhysX 4.1
-	////Cude context manager
-	//PxCudaContextManagerDesc cudaContextManDesc = PxCudaContextManagerDesc();
-	//cudaContextManDesc.interopMode = PxCudaInteropMode::D3D11_INTEROP;
-	//cudaContextManDesc.graphicsDevice = pDevice;
-
-	//m_pCudaContextManager = PxCreateCudaContextManager(*m_pFoundation, cudaContextManDesc, m_pProfileZoneManager);
-	//if (m_pCudaContextManager)
-	//{
-	//	if (!m_pCudaContextManager->contextIsValid())
-	//	{
-	//		m_pCudaContextManager->release();
-	//		m_pCudaContextManager = nullptr;
-	//	}
-	//	else
-	//	{
-	//		auto deviceName =std::string(m_pCudaContextManager->getDeviceName());
-	//		Logger::LogFormat(LogLevel::Info, L"PhysXManager> Using Cuda Context Manager [%s]", std::wstring(deviceName.begin(), deviceName.end()).c_str());
-	//	}
-	//}
-
 	//Create Main Physics Object
 	m_pPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *m_pFoundation, PxTolerancesScale(), true, m_pPvd);
 	ASSERT_NULL(m_pPhysics, L"Physx: Physics Object creation failed!");

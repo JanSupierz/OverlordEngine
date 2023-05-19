@@ -302,7 +302,6 @@ void RigidBodyComponent::SetConstraint(RigidBodyConstraint flag, bool enable)
 
 	if(m_pActor)
 	{
-		//TODO: Refactor!!
 		const auto pRigidBody = m_pActor->is<PxRigidDynamic>();
 		if (isSet(flag, RigidBodyConstraint::RotX))
 		{

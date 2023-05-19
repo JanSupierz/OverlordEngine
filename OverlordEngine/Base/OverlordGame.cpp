@@ -16,16 +16,16 @@ OverlordGame::~OverlordGame()
 
 	//Game Cleanup
 	MaterialManager::Destroy();
-	ContentManager::Release(); //TODO > Singleton
-	DebugRenderer::Release(); //TODO > Singleton
-	InputManager::Release(); //Todo > Rename to Destroy
+	ContentManager::Release();
+	DebugRenderer::Release();
+	InputManager::Release();
 	SceneManager::Destroy();
 	PhysXManager::Destroy();
 	SoundManager::Destroy();
 	SpriteRenderer::Destroy();
 	TextRenderer::Destroy();
 	ShadowMapRenderer::Destroy();
-	Logger::Release(); //TODO > Singleton
+	Logger::Release();
 
 	//ImGui Cleanup
 	ImGui_ImplDX11_Shutdown();
@@ -87,7 +87,6 @@ HRESULT OverlordGame::Run(HINSTANCE hInstance)
 		GameLoop();
 	}
 
-	//TODO: should return 'msg.wParam'
 	return S_OK;
 }
 
@@ -239,7 +238,6 @@ HRESULT OverlordGame::InitializeDirectX()
 	//Set Default Rendertarget 
 	SetRenderTarget(nullptr);
 
-	//TODO: Logger::LogTodo(L"Viewport ownership, overlordgame");
 	m_Viewport.Width	= static_cast<FLOAT>(m_GameContext.windowWidth);
 	m_Viewport.Height	= static_cast<FLOAT>(m_GameContext.windowHeight);
 	m_Viewport.TopLeftX = 0;

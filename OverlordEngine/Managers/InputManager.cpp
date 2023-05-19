@@ -237,7 +237,6 @@ void InputManager::UpdateInputStates(bool overrideEnable)
 		m_LastUpdate = currTime;
 	}
 
-	//TODO: Refactor Mouse Updates
 	//Update Mouse Position
 	m_OldMousePosition = m_CurrMousePosition;
 	if (GetCursorPos(&m_CurrMousePosition))

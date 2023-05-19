@@ -164,7 +164,7 @@ public:
 	USHORT GetBoneCount() { return m_BoneCount; }
 
 private:
-	friend class MeshFilterLoader; //TODO: Resolve Friend Classes
+	friend class MeshFilterLoader;
 	friend class ModelComponent;
 	friend class ModelAnimator;
 

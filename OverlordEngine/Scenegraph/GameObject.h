@@ -148,8 +148,8 @@ private:
 	void RootPostInitialize(const SceneContext& sceneContext);
 	void RootUpdate(const SceneContext& sceneContext);
 	void RootDraw(const SceneContext& sceneContext);
-	void RootPostDraw(const SceneContext& sceneContext); //TODO: collapse in single Draw with context
-	void RootShadowMapDraw(const SceneContext& sceneContext) const; //TODO: collapse in single Draw with context
+	void RootPostDraw(const SceneContext& sceneContext);
+	void RootShadowMapDraw(const SceneContext& sceneContext) const;
 	void RootOnSceneAttach(GameScene* pScene);
 	void RootOnSceneDetach(GameScene* pScene);
 
