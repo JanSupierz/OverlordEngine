@@ -1,4 +1,5 @@
 #pragma once
+
 class ModelAnimator;
 class Grid;
 
@@ -60,6 +61,8 @@ public:
 	void SetAnimator(ModelAnimator* pAnimator);
 
 	int GetIndex() const;
+
+	void AddScore();
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
@@ -82,5 +85,7 @@ private:
 	ModelAnimator* m_pAnimator{ nullptr };
 	CharacterAction m_CurrentAction{ CharacterAction::standing };
 	Grid* m_pGrid;
+	int m_Score;
+	bool m_CanPlaceBomb;
 };
 

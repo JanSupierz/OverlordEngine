@@ -59,7 +59,7 @@ float Grid::GetCellSize() const
 }
 
 Node::Node(int col, int row, Grid* pGrid)
-	:m_Col{ col }, m_Row{ row }, m_pGrid{ pGrid }, m_IsBlocked{ false }
+	:m_Col{ col }, m_Row{ row }, m_pGrid{ pGrid }, m_CellState{ CellState::Empty }
 {
 }
 
@@ -108,12 +108,14 @@ Node* Node::GetNeighbor(Direction direction) const
 	return m_pGrid->GetNode(col, row);
 }
 
-void Node::SetBlocked(bool isBlocked)
+void Node::SetCellState(CellState state)
 {
-	m_IsBlocked = isBlocked;
+	m_CellState = state;
 }
 
-bool Node::IsBlocked() const
+CellState Node::GetCellState()
 {
-	return m_IsBlocked;
+	return m_CellState;
 }
+
+

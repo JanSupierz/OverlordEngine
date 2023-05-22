@@ -2,13 +2,16 @@
 #include "Bomberman/Character.h"
 #include "Bomberman/Bomb.h"
 #include "Bomberman/Grid.h"
-#include "BombermanScene.h"
+#include "Scenes/BombermanScene.h"
 
 Character::Character(const CharacterDesc& characterDesc, Grid* pGrid) :
-	m_CharacterDesc{ characterDesc }, m_pGrid{ pGrid }, 
+	m_CharacterDesc{ characterDesc }, m_pGrid{ pGrid },
 	m_MoveAcceleration(characterDesc.maxMoveSpeed / characterDesc.moveAccelerationTime),
-	m_FallAcceleration(characterDesc.maxFallSpeed / characterDesc.fallAccelerationTime)
-{}
+	m_FallAcceleration(characterDesc.maxFallSpeed / characterDesc.fallAccelerationTime),
+	m_Score{ 0 }
+{
+	SetTag(L"Player");
+}
 
 void Character::Initialize(const SceneContext& /*sceneContext*/)
 {
@@ -154,10 +157,19 @@ void Character::Update(const SceneContext& sceneContext)
 
 			//************
 			//DISPLACEMENT
-
 			m_pControllerComponent->Move(XMFLOAT3{ m_TotalVelocity.x * elapsedSec ,m_TotalVelocity.y * elapsedSec ,m_TotalVelocity.z * elapsedSec });
 		}
 		break;
+		case CharacterAction::placingBomb:
+			m_CanPlaceBomb = true;
+			break;
+		case CharacterAction::stopPlacing:
+			if (m_CanPlaceBomb)
+			{
+				PlaceBomb();
+				m_CanPlaceBomb = false;
+			}
+			break;
 		default:
 			break;
 	}
@@ -235,8 +247,6 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 			{
 				m_pAnimator->SetPlayReversed(false);
 				m_CurrentAction = CharacterAction::standing;
-
-				PlaceBomb();
 			}
 		}
 		break;
@@ -264,7 +274,7 @@ void Character::PlaceBomb() const
 	Node* pNode{ m_pGrid->GetNode(XMFLOAT2{bombPosition.x, bombPosition.z}) };
 
 	//If node in front of you is blocked
-	if (!pNode || (pNode && pNode->IsBlocked()))
+	if (!pNode || (pNode && pNode->GetCellState() != CellState::Empty))
 	{
 		//Spawn the bomb in your cell
 		pNode = m_pGrid->GetNode(XMFLOAT2{ worldPos.x, worldPos.z });
@@ -285,4 +295,9 @@ void Character::SetAnimator(ModelAnimator* pAnimator)
 int Character::GetIndex() const
 {
 	return static_cast<int>(m_CharacterDesc.gamepadIndex);
+}
+
+void Character::AddScore()
+{
+	++m_Score;
 }

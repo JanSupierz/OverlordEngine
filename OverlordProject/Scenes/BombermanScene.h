@@ -3,6 +3,7 @@ class Character;
 class ColorMaterial_Shadow_Skinned;
 class DiffuseMaterial_Shadow;
 class Grid;
+class PostChromaticAberration;
 
 struct PlayerDesc
 {
@@ -54,7 +55,7 @@ protected:
 
 private:
 	void InitArena();
-	void CreateCube(int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset = 0.f, float scale = 1.f, bool disableRigid = false);
+	void CreateCube(bool isDestructible, int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset = 0.f, float scale = 1.f, bool disableRigid = false);
 	void InitPlayer(const PlayerDesc& playerDesc);
 
 	int ToInputId(int index, int basicInputId) const;
@@ -84,6 +85,10 @@ private:
 	std::vector<Character*> m_pCharacters{};
 	std::unique_ptr<Grid> m_pGrid;
 
+	PostChromaticAberration* m_pChromatic;
+	const float m_MaxScreenShakeDuration{ 0.5f };
+	float m_ScreenShakeTimer{};
+	
 	static std::vector<GameObject*> s_pObjectsToAdd;
 	static std::vector<GameObject*> s_pObjectsToRemove;
 	static bool s_CheckVectors;

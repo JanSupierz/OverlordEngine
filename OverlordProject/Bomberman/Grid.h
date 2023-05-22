@@ -4,6 +4,8 @@
 
 class Grid;
 
+enum class CellState { Destructible, NonDestructible, Empty };
+
 class Node final
 {
 public:
@@ -22,13 +24,14 @@ public:
 
 	XMFLOAT2 GetWorldPos() const;
 	Node* GetNeighbor(Direction direction) const;
-	void SetBlocked(bool isBlocked);
-	bool IsBlocked() const;
+
+	void SetCellState(CellState state);
+	CellState GetCellState();
 private:
 	int m_Col, m_Row;
 	Grid* m_pGrid;
 
-	bool m_IsBlocked;
+	CellState m_CellState;
 };
 
 class Grid final

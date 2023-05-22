@@ -20,10 +20,10 @@ public:
 	static void SetBombMaterials(BaseMaterial* pBombMaterial, PxMaterial* pStaticMaterial);
 
 	virtual void Update(const SceneContext& sceneContext) override;
+	static bool CheckExplosion();
 
-private:
 	void Explode();
-
+private:
 	const Character* const m_pOwner;
 	Grid* m_pGrid;
 
@@ -31,10 +31,12 @@ private:
 	const int m_MaxRange;
 
 	const int m_StartRow, m_StartCol;
+	bool m_AlreadyExploded;
 
 	static BaseMaterial* s_pBombMaterial;
 	static PxMaterial* s_pStaticMaterial;
 
 	static std::unordered_map<int, int> s_Characters;
+	static bool s_BombExploded;
 };
 

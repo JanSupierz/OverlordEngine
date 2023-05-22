@@ -5,15 +5,17 @@
 #include "Materials/Shadow/DiffuseMaterial_Shadow_Skinned.h"
 #include "Bomberman/Grid.h"
 #include "Bomberman/Fire.h"
-#include "BombermanScene.h"
+#include "Scenes/BombermanScene.h"
 
 BaseMaterial* Bomb::s_pBombMaterial{ nullptr };
 PxMaterial* Bomb::s_pStaticMaterial{ nullptr };
 std::unordered_map<int, int> Bomb::s_Characters;
+bool Bomb::s_BombExploded{ false };
 
 Bomb::Bomb(int col, int row, const Character* const pOwner, Grid* pGrid)
-	:m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_LifeTime{ 3.f }, m_MaxRange{ 3 }, m_StartCol{ col }, m_StartRow{ row }
+	:m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_LifeTime{ 3.f }, m_MaxRange{ 3 }, m_StartCol{ col }, m_StartRow{ row }, m_AlreadyExploded{ false }
 {
+	SetTag(L"Bomb");
 }
 
 Bomb::~Bomb()
@@ -74,10 +76,25 @@ void Bomb::Update(const SceneContext& sceneContext)
 	}
 }
 
+bool Bomb::CheckExplosion() 
+{
+	bool temp{ s_BombExploded };
+	s_BombExploded = false;
+
+	return temp;
+}
+
 void Bomb::Explode()
 {
+	s_BombExploded = true;
+
+	if (m_AlreadyExploded) return;
+	m_AlreadyExploded = true;
+
 	const auto pos{ GetTransform()->GetWorldPosition() };
 	Node* pNode{ m_pGrid->GetNode(XMFLOAT2{pos.x, pos.z}) };
+
+	BombermanScene::AddGameObject(new Fire(pNode->GetCol(), pNode->GetRow(), m_pOwner, m_pGrid));
 
 	for (int index{}; index < 4; ++index)
 	{
@@ -89,10 +106,16 @@ void Bomb::Explode()
 			pCurrentNode = pCurrentNode->GetNeighbor(direction);
 
 			//Check a different direction if no more neighbors in this direction
-			if (!pCurrentNode || (pCurrentNode && pCurrentNode->IsBlocked())) break;
+			if (!pCurrentNode || (pCurrentNode && pCurrentNode->GetCellState() == CellState::NonDestructible)) break;
 
 			//You can't add children during the update of game objects
 			BombermanScene::AddGameObject(new Fire(pCurrentNode->GetCol(), pCurrentNode->GetRow(), m_pOwner, m_pGrid));
+
+			//Stop moving in this direction
+			if (pCurrentNode->GetCellState() == CellState::Destructible)
+			{
+				break;
+			}
 		}
 	}
 

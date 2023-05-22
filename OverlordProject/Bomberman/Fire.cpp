@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "Fire.h"
 #include "Grid.h"
-#include "BombermanScene.h"
+#include "Scenes/BombermanScene.h"
+#include "Character.h"
+#include "Bomb.h"
+#include "Cube.h"
 
 BaseMaterial* Fire::s_pFireMaterial{ nullptr };
 PxMaterial* Fire::s_pStaticMaterial{ nullptr };
@@ -9,7 +12,7 @@ PxMaterial* Fire::s_pStaticMaterial{ nullptr };
 Fire::Fire(int col, int row, const Character* const pOwner, Grid* pGrid)
 	:m_LifeTime{ 0.5f }, m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_pNode{ m_pGrid->GetNode(col, row) }
 {
-	m_pNode->SetBlocked(false);
+	SetTag(L"Fire");
 }
 
 Fire::~Fire()
@@ -36,14 +39,40 @@ void Fire::Initialize(const SceneContext&)
 	//Rigid body
 	auto pRigid{ AddComponent(new RigidBodyComponent(true)) };
 	
-	const auto geo{ PxBoxGeometry{ halfCube,halfCube,halfCube } };
+	const float geoSize{ 0.8f * halfCube };
+	const auto geo{ PxBoxGeometry{ geoSize ,geoSize,geoSize } };
 	pRigid->AddCollider(geo, *s_pStaticMaterial, true, PxTransform{ 0.f,halfCube,0.f });
 	
 	auto triggerCallBack = [=](GameObject*, GameObject* pOther, PxTriggerAction action)
 	{
 		if (action == PxTriggerAction::ENTER)
 		{
-			BombermanScene::RemoveGameObject(pOther);
+			std::wstring tag{ pOther->GetTag() };
+
+			if (tag == L"Cube")
+			{
+				Cube* pCube = static_cast<Cube*>(pOther);
+				pCube->DestroyCube();
+			}
+			else if (tag == L"Player")
+			{
+				//Other player gains a point
+				Character* pCharacter = static_cast<Character*>(pOther);
+
+				if (m_pOwner != pCharacter)
+				{
+					pCharacter->AddScore();
+				}
+
+				BombermanScene::RemoveGameObject(pOther);
+			}
+			else if(tag == L"Bomb")
+			{
+				//Explosion chain
+				Bomb* pBomb = static_cast<Bomb*>(pOther);
+				pBomb->Explode();
+			}
+
 		}
 	};
 	

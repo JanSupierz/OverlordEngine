@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include <cstdlib>
+#include <ctime>
+
 #include "BombermanScene.h"
 
 #include "Prefabs/CubePrefab.h"
@@ -16,6 +19,9 @@
 #include "Bomberman/Grid.h"
 #include "Bomberman/Bomb.h"
 #include "Bomberman/Fire.h"
+#include "Bomberman/Cube.h"
+#include "Bomberman/PickUp.h"
+#include "Materials/Post/PostChromaticAberration.h"
 
 std::vector<GameObject*> BombermanScene::s_pObjectsToAdd{};
 std::vector<GameObject*> BombermanScene::s_pObjectsToRemove{};
@@ -26,6 +32,9 @@ BombermanScene::BombermanScene() :
 	m_pGrid{ std::move(std::make_unique<Grid>(15, 15, m_CubeSize))
 }
 {
+	//Init random values
+	std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
 	m_pCharacters.resize(4);
 }
 
@@ -107,7 +116,12 @@ void BombermanScene::Initialize()
 	m_pFixedCamera->GetTransform()->Rotate(70, 0, 0);
 	AddChild(m_pFixedCamera);
 	
-	SetActiveCamera(m_pFixedCamera->GetComponent<CameraComponent>());
+	//SetActiveCamera(m_pFixedCamera->GetComponent<CameraComponent>());
+
+	//Add post-processing effect
+	m_pChromatic = MaterialManager::Get()->CreateMaterial<PostChromaticAberration>();
+	m_pChromatic->SetIsEnabled(false);
+	AddPostProcessingEffect(m_pChromatic);
 }
 
 void BombermanScene::Update()
@@ -127,6 +141,22 @@ void BombermanScene::Update()
 		s_pObjectsToAdd.clear();
 		s_pObjectsToRemove.clear();
 	}
+
+	if (Bomb::CheckExplosion())
+	{
+		m_ScreenShakeTimer = m_MaxScreenShakeDuration;
+		m_pChromatic->SetIsEnabled(true);
+	}
+
+	if (m_ScreenShakeTimer > 0.f)
+	{
+		m_ScreenShakeTimer -= m_SceneContext.pGameTime->GetElapsed();
+
+		if (m_ScreenShakeTimer <= 0.f)
+		{
+			m_pChromatic->SetIsEnabled(false);
+		}
+	}
 }
 
 void BombermanScene::Draw()
@@ -135,53 +165,36 @@ void BombermanScene::Draw()
 
 void BombermanScene::OnGUI()
 {
-	//ImGui::Text("This only activates if\n SceneSettings.enableOnGUI is True.\n\n");
-	//ImGui::Text("Use ImGui to add custom\n controllable scene parameters!");
-	//ImGui::ColorEdit3("Demo ClearColor", &m_SceneContext.settings.clearColor.x, ImGuiColorEditFlags_NoInputs);
-	//
-	//if (ImGui::Button(pAnimator->IsPlaying() ? "PAUSE" : "PLAY"))
-	//{
-	//	if (pAnimator->IsPlaying())pAnimator->Pause();
-	//	else pAnimator->Play();
-	//}
-	//
-	//if (ImGui::Button("RESET"))
-	//{
-	//	pAnimator->Reset();
-	//}
-	//
-	//ImGui::Dummy({ 0,5 });
-	//
-	//bool reversed = pAnimator->IsReversed();
-	//if (ImGui::Checkbox("Play Reversed", &reversed))
-	//{
-	//	pAnimator->SetPlayReversed(reversed);
-	//}
-	//
-	//if (ImGui::ListBox("Animation Clip", &m_AnimationClipId, m_ClipNames, static_cast<int>(m_ClipCount)))
-	//{
-	//	pAnimator->SetAnimation(m_AnimationClipId);
-	//}
-	//
-	//if (ImGui::SliderFloat("Animation Speed", &m_AnimationSpeed, 0.f, 4.f))
-	//{
-	//	pAnimator->SetAnimationSpeed(m_AnimationSpeed);
-	//}
 }
 
-void BombermanScene::CreateCube(int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset, float scale, bool disableRigidBody)
+void BombermanScene::CreateCube(bool isDestructible, int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset, float scale, bool disableRigidBody)
 {
 	const float cubeDimensions{ m_CubeSize * scale };
 	const float halfCube{ cubeDimensions * 0.5f };
 
 	Node* pNode{ m_pGrid->GetNode(col, row) };
 
-	//Blocks above ground are blocking the player
-	if (height == 1)
-	pNode->SetBlocked(true);
+	//Skip if node is not free
+	if (height == 1 && pNode->GetCellState() != CellState::Empty) return;
 
 	//Translate to the node position
-	auto pObject{ AddChild(new GameObject) };
+	GameObject* pObject{};
+
+	if (isDestructible)
+	{
+		pObject = AddChild(new Cube(pNode, m_pGrid.get()));
+	}
+	else
+	{
+		pObject = AddChild(new GameObject());
+
+		//Blocks above ground are blocking fire
+		if (height == 1)
+		{
+			pNode->SetCellState(CellState::NonDestructible);
+		}
+	}
+
 	const auto transform{ pObject->GetTransform() };
 	const XMFLOAT2 nodePos{ pNode->GetWorldPos() };
 
@@ -195,10 +208,15 @@ void BombermanScene::CreateCube(int col, int row, int height, const std::wstring
 	//Rigid body
 	if (disableRigidBody) return;
 
-	auto pRigid{ pObject->AddComponent(new RigidBodyComponent(true)) };
+	auto pRigid{ pObject->AddComponent(new RigidBodyComponent(!isDestructible)) };
 
 	const auto geo{ PxBoxGeometry{ halfCube,halfCube,halfCube } };
 	pRigid->AddCollider(geo, *pStaticMaterial, false, PxTransform{ 0.f,halfCube - heightOffset,0.f });
+
+	if (isDestructible)
+	{
+		pRigid->SetConstraint(RigidBodyConstraint::All, false);
+	}
 }
 
 void BombermanScene::InitArena()
@@ -208,16 +226,37 @@ void BombermanScene::InitArena()
 	auto pStaticMaterial = physX.createMaterial(1.f, 1.f, 0.f);
 
 	//Set bomb materials
-	const auto pBombMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
-	pBombMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
+	{
+		const auto pBombMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
+		pBombMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
 
-	Bomb::SetBombMaterials(pBombMaterial, pStaticMaterial);
+		Bomb::SetBombMaterials(pBombMaterial, pStaticMaterial);
+	}
 
 	//Set Fire materials
-	const auto pFireMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>() };
-	pFireMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
+	{
+		const auto pFireMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>() };
+		pFireMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
 
-	Fire::SetFireMaterials(pFireMaterial, pStaticMaterial);
+		Fire::SetFireMaterials(pFireMaterial, pStaticMaterial);
+	}
+
+	//Set pick ups materials
+	{
+		PickUp::SetPhysicsMaterial(pStaticMaterial);
+
+		const auto pFrameMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
+		pFrameMaterial->SetColor(DirectX::Colors::DarkGray);
+
+		PickUp::SetPickUpMaterial(PickUpType::None, pFrameMaterial);
+
+		auto pPickUpMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
+		pPickUpMaterial->SetDiffuseTexture(L"Textures/Bomberman/PickUp/Bomb.png");
+
+		PickUp::SetPickUpMaterial(PickUpType::PlaceTwoBombs, pPickUpMaterial);
+		PickUp::SetPickUpMaterial(PickUpType::DoubleRange, pPickUpMaterial);
+		PickUp::SetPickUpMaterial(PickUpType::NotBlockable, pPickUpMaterial);
+	}
 
 	//Create ground
 	auto pColorMaterialNoShadow = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
@@ -240,23 +279,23 @@ void BombermanScene::InitArena()
 	const int nrCols{ m_pGrid->GetNrCols() };
 	for (int col{}; col < nrCols; ++col)
 	{
-		CreateCube(col, 0, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, col, 0, 1, meshFilePath, pColorMaterial, pStaticMaterial);
 	}
 
 	const int nrRows{ m_pGrid->GetNrRows() };
 	for (int col{}; col < nrCols; ++col)
 	{
-		CreateCube(col, nrRows - 1, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, col, nrRows - 1, 1, meshFilePath, pColorMaterial, pStaticMaterial);
 	}
 
 	for (int row{ 1 }; row < nrRows - 1; ++row)
 	{
-		CreateCube(0, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, 0, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
 	}
 
 	for (int row{ 1 }; row < nrRows - 1; ++row)
 	{
-		CreateCube(nrCols - 1, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, nrCols - 1, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
 	}
 
 	//Ground Cubes
@@ -273,7 +312,7 @@ void BombermanScene::InitArena()
 	{
 		for (int col{}; col < nrCols; ++col)
 		{
-			CreateCube(col, row, 0, meshFilePath, isDark ? pDarkColorMaterial : pLightColorMaterial, pStaticMaterial, 0.5f * m_CubeSize, 1.f, true);
+			CreateCube(false, col, row, 0, meshFilePath, isDark ? pDarkColorMaterial : pLightColorMaterial, pStaticMaterial, 0.5f * m_CubeSize, 1.f, true);
 	
 			isDark = !isDark;
 		}
@@ -296,7 +335,20 @@ void BombermanScene::InitArena()
 	{
 		for (int col{ 2 }; col < nrCols - 2; col += 2)
 		{
-			CreateCube(col, row, 1, meshFilePath, pGreyColorMaterial, pStaticMaterial, 0.5f * m_CubeSize * scale, scale);
+			CreateCube(false, col, row, 1, meshFilePath, pGreyColorMaterial, pStaticMaterial, 0.5f * m_CubeSize * scale, scale);
+		}
+	}
+
+	//Destructible Cubes
+	meshFilePath = L"Meshes/Bomberman/Rock.ovm";
+	const auto pRockMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
+	pRockMaterial->SetDiffuseTexture(L"Textures/Bomberman/Rock_Diffuse.jpg");
+
+	for (int row{ 1 }; row < nrRows - 1; ++row)
+	{
+		for (int col{ 1 }; col < nrCols - 1; ++col)
+		{
+			CreateCube(true, col, row, 1, meshFilePath, pRockMaterial, pStaticMaterial);
 		}
 	}
 }

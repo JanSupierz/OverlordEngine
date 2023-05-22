@@ -9,7 +9,7 @@
 //#define W7
 //#define W8
 //#define W9
-// #define W10
+//#define W10
 
 #define Bomberman
 
@@ -60,7 +60,7 @@
 #endif
 
 #ifdef Bomberman
-#include "Bomberman/BombermanScene.h"
+#include "Scenes/BombermanScene.h"
 #endif
 
 #ifdef MILESTONE_1
