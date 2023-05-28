@@ -44,6 +44,8 @@
     <ClCompile Include="Materials\Post\PostGrayscale.cpp" />
     <ClCompile Include="Bomberman\Cube.cpp" />
     <ClCompile Include="Bomberman\PickUp.cpp" />
+    <ClCompile Include="Scenes\MainMenuScene.cpp" />
+    <ClCompile Include="Bomberman\PlayerJoinIcon.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainGame.h" />
@@ -88,5 +90,7 @@
     <ClInclude Include="Materials\Post\PostGrayscale.h" />
     <ClInclude Include="Bomberman\Cube.h" />
     <ClInclude Include="Bomberman\PickUp.h" />
+    <ClInclude Include="Scenes\MainMenuScene.h" />
+    <ClInclude Include="Bomberman\PlayerJoinIcon.h" />
   </ItemGroup>
 </Project>

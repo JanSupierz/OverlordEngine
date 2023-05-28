@@ -9,7 +9,7 @@
 BaseMaterial* Fire::s_pFireMaterial{ nullptr };
 PxMaterial* Fire::s_pStaticMaterial{ nullptr };
 
-Fire::Fire(int col, int row, const Character* const pOwner, Grid* pGrid)
+Fire::Fire(int col, int row, Character* pOwner, Grid* pGrid)
 	:m_LifeTime{ 0.5f }, m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_pNode{ m_pGrid->GetNode(col, row) }
 {
 	SetTag(L"Fire");
@@ -61,18 +61,11 @@ void Fire::Initialize(const SceneContext&)
 
 				if (m_pOwner != pCharacter)
 				{
-					pCharacter->AddScore();
+					m_pOwner->AddScore();
 				}
 
-				BombermanScene::RemoveGameObject(pOther);
+				pCharacter->SetIsActive(false);
 			}
-			else if(tag == L"Bomb")
-			{
-				//Explosion chain
-				Bomb* pBomb = static_cast<Bomb*>(pOther);
-				pBomb->Explode();
-			}
-
 		}
 	};
 	

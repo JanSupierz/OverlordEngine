@@ -7,7 +7,6 @@
 #include "Prefabs/CubePrefab.h"
 #include "Prefabs/SpherePrefab.h"
 
-#include "Prefabs/TorusPrefab.h"
 #include "Materials/Shadow/DiffuseMaterial_Shadow.h"
 #include "Materials/DiffuseMaterial.h"
 #include "Materials/DiffuseMaterial_Skinned.h"
@@ -27,15 +26,23 @@ std::vector<GameObject*> BombermanScene::s_pObjectsToAdd{};
 std::vector<GameObject*> BombermanScene::s_pObjectsToRemove{};
 bool BombermanScene::s_CheckVectors{ false };
 
+BombermanScene* BombermanScene::s_CurrentScene{};
+
 BombermanScene::BombermanScene() :
-	GameScene(L"BombermanScene"), m_CubeSize{ 10.f }, 
-	m_pGrid{ std::move(std::make_unique<Grid>(15, 15, m_CubeSize))
-}
+	GameScene(L"BombermanScene"), m_CubeSize{ 10.f }, m_pChromatic{ nullptr }, 
+	m_pGrid{ std::move(std::make_unique<Grid>(15, 15, m_CubeSize)) }, m_DefaultCameraOffset{ 0, m_MaxCameraHeight, -65.f }
 {
+	s_CurrentScene = this;
+
 	//Init random values
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
 	m_pCharacters.resize(4);
+	
+	for (int index{}; index < 4; ++index)
+	{
+		m_pCharacters[index] = nullptr;
+	}
 }
 
 BombermanScene::~BombermanScene()
@@ -63,60 +70,28 @@ void BombermanScene::RemoveGameObject(GameObject* pGameObject)
 	s_CheckVectors = true;
 }
 
+BombermanScene* BombermanScene::GetCurrent()
+{
+	return s_CurrentScene;
+}
+
 void BombermanScene::Initialize()
 {
 	m_SceneContext.settings.drawGrid = false;
 	m_SceneContext.settings.drawPhysXDebug = false;
-	m_SceneContext.settings.enableOnGUI = true;
+	m_SceneContext.settings.enableOnGUI = false;
 
 	m_SceneContext.pLights->SetDirectionalLight({ -60.f,100.f, 10.f }, { 0.4f, -0.7f, 0.f });
 
-	{
-		const auto pBlackMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
-		pBlackMaterial->SetColor(DirectX::Colors::Black);
-	
-		const auto pWhiteMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
-		pWhiteMaterial->SetColor(DirectX::Colors::White);
-	
-		const auto pPinkMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
-		pPinkMaterial->SetColor(DirectX::Colors::HotPink);
-	
-		const auto pBlueMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
-		pBlueMaterial->SetColor(DirectX::Colors::Blue);
-	
-		const auto pGoldMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
-		pGoldMaterial->SetColor(DirectX::Colors::Gold);
-	
-		const auto pSkinMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
-		pSkinMaterial->SetColor(DirectX::Colors::Bisque);
-		
-		auto& physX = PxGetPhysics();
-		auto pDefaultMaterial = physX.createMaterial(0.5f, 0.5f, 0.1f);
-
-		InitArena();
-		PlayerDesc playerDesc{ 0,pDefaultMaterial };
-		playerDesc.pShirtMaterial = pBlueMaterial;
-		playerDesc.pMainMaterial = pWhiteMaterial;
-		playerDesc.pBlackMaterial = pBlackMaterial;
-		playerDesc.pGoldMaterial = pGoldMaterial;
-		playerDesc.pGlovesMaterial = pPinkMaterial;
-		playerDesc.pSkinMaterial = pSkinMaterial;
-		playerDesc.spriteOffsetY = 100.f;
-		InitPlayer(playerDesc);
-
-		playerDesc.index = 1;
-		playerDesc.pMainMaterial = pBlackMaterial;
-		playerDesc.spriteName = L"Icon_Black";
-		playerDesc.spriteOffsetY += 200.f;
-		InitPlayer(playerDesc);
-	}
+	InitArena();
 	
 	m_pFixedCamera = new FixedCamera();
-	m_pFixedCamera->GetTransform()->Translate(0, m_MaxCameraHeight, -80);
+	m_pFixedCamera->GetTransform()->Translate(m_DefaultCameraOffset);
 	m_pFixedCamera->GetTransform()->Rotate(70, 0, 0);
 	AddChild(m_pFixedCamera);
 	
-	//SetActiveCamera(m_pFixedCamera->GetComponent<CameraComponent>());
+	m_pCameraComp = m_pFixedCamera->GetComponent<CameraComponent>();
+	SetActiveCamera(m_pCameraComp);
 
 	//Add post-processing effect
 	m_pChromatic = MaterialManager::Get()->CreateMaterial<PostChromaticAberration>();
@@ -157,6 +132,62 @@ void BombermanScene::Update()
 			m_pChromatic->SetIsEnabled(false);
 		}
 	}
+
+	XMFLOAT3 cameraPosition{};
+	XMVECTOR cameraVector{ XMLoadFloat3(&cameraPosition) };
+	int nrPlayers{};
+	float largestDistance{};
+
+	for (Character* pCharacter : m_pCharacters)
+	{
+		if (pCharacter && pCharacter->GetIsActive())
+		{
+			XMFLOAT3 position{ pCharacter->GetTransform()->GetWorldPosition() };
+			XMVECTOR positionVector{ XMLoadFloat3(&position) };
+
+			cameraVector += positionVector;
+			++nrPlayers;
+
+			//Get largest distance between players
+			for (Character* pOther : m_pCharacters)
+			{
+				if (pOther != pCharacter && pOther && pOther->GetIsActive())
+				{
+					XMFLOAT3 otherPosition{ pOther->GetTransform()->GetWorldPosition() };
+					XMVECTOR otherVector{ XMLoadFloat3(&otherPosition) };
+					
+					const float distance{ XMVectorGetX(XMVector3Length(otherVector - positionVector)) };
+					if (distance > largestDistance)
+					{
+						largestDistance = distance;
+					}
+				}
+			}
+		}
+	}
+
+	//Average player position
+	if(nrPlayers > 0)
+	cameraVector /= static_cast<float>(nrPlayers);
+
+	//Lerp towards the desired position
+	const float t{ m_SceneContext.pGameTime->GetElapsed() * 1.1f };
+	cameraVector = XMVectorLerp(XMLoadFloat3(&m_LastCameraPosition), cameraVector, t);
+
+	XMStoreFloat3(&cameraPosition, cameraVector);
+
+	m_LastCameraPosition = cameraPosition;
+
+	//Fov interpolation
+	const float fov{ XM_PIDIV4 - (1.f - (largestDistance / 80.0f)) * XM_PIDIV4 * 0.1f };
+	m_LastFov = std::lerp(m_LastFov, fov, t);
+
+	m_pCameraComp->SetFieldOfView(m_LastFov);
+
+	//Add basic offset
+	cameraVector += XMLoadFloat3(&m_DefaultCameraOffset);
+
+	m_pFixedCamera->GetTransform()->Translate(cameraVector);
 }
 
 void BombermanScene::Draw()
@@ -265,7 +296,7 @@ void BombermanScene::InitArena()
 	auto pObject = AddChild(new GameObject);
 	auto pModel = pObject->AddComponent(new ModelComponent(L"Meshes/UnitPlane.ovm"));
 	pModel->SetMaterial(pColorMaterialNoShadow);
-	pModel->GetTransform()->Scale(40.f);
+	pModel->GetTransform()->Scale(50.f);
 
 	//Ground plane
 	GameSceneExt::CreatePhysXGroundPlane(*this, pBouncyMaterial);
@@ -344,17 +375,40 @@ void BombermanScene::InitArena()
 	const auto pRockMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
 	pRockMaterial->SetDiffuseTexture(L"Textures/Bomberman/Rock_Diffuse.jpg");
 
+	//Leave space for the players
+	std::vector<std::pair<int, int>> reserved;
+	reserved.emplace_back(1, 1);
+	reserved.emplace_back(2, 1);
+	reserved.emplace_back(1, 2);
+
+	reserved.emplace_back(1, nrCols - 2);
+	reserved.emplace_back(2, nrCols - 2);
+	reserved.emplace_back(1, nrCols - 3);
+	
+	reserved.emplace_back(nrRows - 2, nrCols - 2);
+	reserved.emplace_back(nrRows - 3, nrCols - 2);
+	reserved.emplace_back(nrRows - 2, nrCols - 3);
+
+	reserved.emplace_back(nrRows - 2, 1);
+	reserved.emplace_back(nrRows - 3, 1);
+	reserved.emplace_back(nrRows - 2, 2);
+
 	for (int row{ 1 }; row < nrRows - 1; ++row)
 	{
 		for (int col{ 1 }; col < nrCols - 1; ++col)
 		{
-			CreateCube(true, col, row, 1, meshFilePath, pRockMaterial, pStaticMaterial);
+			if(!std::any_of(reserved.begin(), reserved.end(), [&](const std::pair<int, int>& pair) { return pair.first == col && pair.second == row; }))
+			{ 
+				//CreateCube(true, col, row, 1, meshFilePath, pRockMaterial, pStaticMaterial);
+			}
 		}
 	}
 }
 
 void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 {
+	++m_NrPlayers;
+
 	constexpr float animationMeshSize{ 100.f };
 	constexpr float animationMeshScale{ 0.1f };
 
@@ -366,6 +420,33 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 
 	//Character
 	{
+		const int nrRows{ m_pGrid->GetNrRows() };
+		const int nrCols{ m_pGrid->GetNrCols() };
+
+		XMFLOAT2 nodePos{};
+		float angle{};
+
+		switch (index)
+		{
+		case 0:
+			nodePos = m_pGrid->GetNode(1, 1)->GetWorldPos();
+			angle = 45.f;
+			break;
+		case 1:
+			nodePos = m_pGrid->GetNode(nrCols - 2, 1)->GetWorldPos();
+			angle = -45;
+			break;
+		case 2:
+			nodePos = m_pGrid->GetNode(nrCols - 2, nrRows - 2)->GetWorldPos();
+			angle = -135;
+			break;
+		case 3:
+		default:
+			nodePos = m_pGrid->GetNode(1, nrRows - 2)->GetWorldPos();
+			angle = 135;
+			break;
+		}
+
 		CharacterDesc characterDesc{ playerDesc.pPxMaterial };
 		characterDesc.actionId_MoveForward = ToInputId(index, CharacterMoveForward);
 		characterDesc.actionId_MoveBackward = ToInputId(index, CharacterMoveBackward);
@@ -378,6 +459,7 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 		characterDesc.controller.stepOffset = 0.1f;
 		characterDesc.maxMoveSpeed = 3.f * playerHeight;
 		characterDesc.rotationSpeed = 10.f;
+		characterDesc.startYaw = angle;
 
 		characterDesc.clipId_Death = playerDesc.clipId_Death;
 		characterDesc.clipId_PlaceBomb = playerDesc.clipId_PlaceBomb;
@@ -386,7 +468,9 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 		characterDesc.clipId_Walking = playerDesc.clipId_Walking;
 
 		m_pCharacters[index] = AddChild(new Character(characterDesc, m_pGrid.get()));
-		m_pCharacters[index]->GetTransform()->Translate(0.f, 2 * playerHeight, 0.f);
+
+		m_pCharacters[index]->GetTransform()->Translate(nodePos.x, 2 * playerHeight, nodePos.y);
+		m_pCharacters[index]->GetTransform()->Rotate(0.f, angle, 0.f);
 	}
 
 	//Animation
@@ -438,9 +522,24 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 	//UI
 	{
 		const auto pSprite = AddChild(new GameObject);
-		pSprite->AddComponent(new SpriteComponent(L"Textures/Bomberman/" + playerDesc.spriteName + L".png", { playerDesc.spritePivotX, playerDesc.spritePivotY }, { 1.f,1.f,1.f,0.8f }));
 
-		pSprite->GetTransform()->Translate(playerDesc.spriteOffsetX, playerDesc.spriteOffsetY, 0.f);
+		float offsetX{ 20.f };
+		float spritePivotX{}, spriteOffsetX{ offsetX }, spriteOffsetY{ 100 };
+
+		if (m_NrPlayers % 2 == 0)
+		{
+			spritePivotX = 1.f;
+			spriteOffsetX = m_SceneContext.windowWidth - offsetX;
+		}
+
+		if (m_NrPlayers > 2)
+		{
+			spriteOffsetY += 200;
+		}
+
+		pSprite->AddComponent(new SpriteComponent(playerDesc.spriteName, { spritePivotX, 0.f }, { 1.f,1.f,1.f,1.f }));
+
+		pSprite->GetTransform()->Translate( spriteOffsetX, spriteOffsetY, 0.f);
 		pSprite->GetTransform()->Scale(0.5f);
 	}
 }

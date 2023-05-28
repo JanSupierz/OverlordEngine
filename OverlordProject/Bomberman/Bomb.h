@@ -8,7 +8,7 @@ class BaseMaterial;
 class Bomb final: public GameObject
 {
 public:
-	Bomb(int col, int row, const Character* const pOwner, Grid* pGrid);
+	Bomb(int col, int row, Character* pOwner, Grid* pGrid);
 	virtual ~Bomb();
 
 	Bomb(const Bomb& other) = delete;
@@ -24,7 +24,14 @@ public:
 
 	void Explode();
 private:
-	const Character* const m_pOwner;
+	enum class PlayerCollision
+	{
+		disabled, enabled, shouldDisable, shouldEnable
+	};
+
+	PlayerCollision m_PlayerCollision{ PlayerCollision::disabled };
+
+	Character* m_pOwner;
 	Grid* m_pGrid;
 
 	float m_LifeTime;
@@ -32,6 +39,12 @@ private:
 
 	const int m_StartRow, m_StartCol;
 	bool m_AlreadyExploded;
+
+	int m_PlayersInside{ 0 };
+
+	bool m_ShouldRemoveCollision{ false };
+	bool m_ShouldAddCollision{ false };
+	RigidBodyComponent* m_pRigid{};
 
 	static BaseMaterial* s_pBombMaterial;
 	static PxMaterial* s_pStaticMaterial;

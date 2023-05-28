@@ -60,6 +60,7 @@
 #endif
 
 #ifdef Bomberman
+#include "Scenes/MainMenuScene.h"
 #include "Scenes/BombermanScene.h"
 #endif
 
@@ -141,6 +142,7 @@ void MainGame::Initialize()
 #endif
 
 #ifdef Bomberman
+	SceneManager::Get()->AddGameScene(new MainMenuScene());
 	SceneManager::Get()->AddGameScene(new BombermanScene());
 #endif
 

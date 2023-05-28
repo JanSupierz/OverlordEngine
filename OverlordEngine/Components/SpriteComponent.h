@@ -18,6 +18,7 @@ public:
 	void SetPivot(const XMFLOAT2& pivot) { m_Pivot = pivot; }
 	void SetColor(const XMFLOAT4& color) { m_Color = color; }
 	void SetTexture(const std::wstring& spriteAsset);
+	void SetMoveDirection(const XMFLOAT2& moveDirection) { m_MoveDirection = moveDirection; }
 
 protected:
 	void Initialize(const SceneContext& sceneContext) override;
@@ -27,5 +28,6 @@ private:
 	TextureData* m_pTexture{};
 	std::wstring m_SpriteAsset{};
 	XMFLOAT2 m_Pivot{};
+	XMFLOAT2 m_MoveDirection{};
 	XMFLOAT4 m_Color{};
 };

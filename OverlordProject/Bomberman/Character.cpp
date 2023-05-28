@@ -8,7 +8,7 @@ Character::Character(const CharacterDesc& characterDesc, Grid* pGrid) :
 	m_CharacterDesc{ characterDesc }, m_pGrid{ pGrid },
 	m_MoveAcceleration(characterDesc.maxMoveSpeed / characterDesc.moveAccelerationTime),
 	m_FallAcceleration(characterDesc.maxFallSpeed / characterDesc.fallAccelerationTime),
-	m_Score{ 0 }
+	m_Score{ 0 }, m_TotalYaw{ characterDesc.startYaw }, m_CanPlaceBomb{ false }
 {
 	SetTag(L"Player");
 }
@@ -21,6 +21,8 @@ void Character::Initialize(const SceneContext& /*sceneContext*/)
 
 void Character::Update(const SceneContext& sceneContext)
 {
+	if (!m_IsActive) return;
+
 	constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
 	const float elapsedSec{ sceneContext.pGameTime->GetElapsed() };
 	
@@ -261,7 +263,7 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 	}
 }
 
-void Character::PlaceBomb() const
+void Character::PlaceBomb()
 {
 	const auto transform{ GetTransform() };
 	XMFLOAT3 worldPos{ transform->GetWorldPosition() };
@@ -300,4 +302,14 @@ int Character::GetIndex() const
 void Character::AddScore()
 {
 	++m_Score;
+}
+
+void Character::SetIsActive(bool isActive)
+{
+	m_IsActive = isActive;
+
+	if (!m_IsActive)
+	{
+		GetTransform()->Translate(0.f, 100.f, -200.f);
+	}
 }

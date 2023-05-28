@@ -97,6 +97,8 @@
     <ClCompile Include="Bomberman\Grid.cpp" />
     <ClCompile Include="Bomberman\Fire.cpp" />
     <ClCompile Include="Bomberman\Cube.cpp" />
+    <ClCompile Include="Bomberman\PlayerJoinIcon.cpp" />
+    <ClCompile Include="Scenes\MainMenuScene.cpp" />
     <ClCompile Include="Materials\Post\PostBlur.cpp" />
     <ClCompile Include="Materials\Post\PostChromaticAberration.cpp" />
     <ClCompile Include="Materials\Post\PostGrayscale.cpp" />
@@ -159,6 +161,8 @@
     <ClInclude Include="Bomberman\Grid.h" />
     <ClInclude Include="Bomberman\Fire.h" />
     <ClInclude Include="Bomberman\Cube.h" />
+    <ClInclude Include="Bomberman\PlayerJoinIcon.h" />
+    <ClInclude Include="Scenes\MainMenuScene.h" />
     <ClInclude Include="Materials\Post\PostBlur.h" />
     <ClInclude Include="Materials\Post\PostChromaticAberration.h" />
     <ClInclude Include="Materials\Post\PostGrayscale.h" />

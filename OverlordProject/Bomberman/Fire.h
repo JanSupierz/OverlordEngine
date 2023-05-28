@@ -8,7 +8,7 @@ class Node;
 class Fire final : public GameObject
 {
 public:
-	Fire(int col, int row, const Character* const pOwner, Grid* pGrid);
+	Fire(int col, int row, Character* pOwner, Grid* pGrid);
 	virtual ~Fire();
 
 	Fire(const Fire& other) = delete;
@@ -22,7 +22,7 @@ public:
 	virtual void Update(const SceneContext& sceneContext) override;
 
 private:
-	const Character* const m_pOwner;
+	Character* m_pOwner;
 	Grid* m_pGrid;
 	Node* m_pNode;
 

@@ -24,8 +24,6 @@ void PickUp::Initialize(const SceneContext&)
 	GetTransform()->Translate(nodePos.x, cellSize, nodePos.y);
 	GetTransform()->Scale(cellSize * 0.5f);
 
-	std::cout << "spawned" << cellSize << '\n';
-
 	const auto pModelObject{ AddChild(new GameObject) };
 	pModelObject->GetTransform()->Translate(0.f, -48.5f, 0.f);
 	auto pModel{ pModelObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/PickUp.ovm")) };

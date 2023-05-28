@@ -7,7 +7,7 @@ public:
 	SpriteRenderer& operator=(const SpriteRenderer& other) = delete;
 	SpriteRenderer& operator=(SpriteRenderer&& other) noexcept = delete;
 
-	void Draw(const SceneContext& sceneContext);
+	void Draw(const SceneContext& sceneContext, const XMFLOAT2& moveDirection = { 0.f,0.f });
 
 	void DrawImmediate(const D3D11Context& d3dContext, ID3D11ShaderResourceView* pSrv, const XMFLOAT2& position, const XMFLOAT4& color = XMFLOAT4{ Colors::White }, const XMFLOAT2& pivot = XMFLOAT2{ 0.f, 0.f }, const XMFLOAT2& scale = XMFLOAT2{ 1.f, 1.f }, float rotation = 0.f);
 
@@ -39,7 +39,11 @@ private:
 	ID3DX11EffectMatrixVariable* m_pEVar_TransformMatrix{};
 	ID3DX11EffectVectorVariable* m_pEVar_TextureSize{};
 	ID3DX11EffectShaderResourceVariable* m_pEVar_TextureSRV{};
+	ID3DX11EffectScalarVariable* m_pEVar_GameTime{};
+	ID3DX11EffectVectorVariable* m_pEVar_MoveDirection{};
 
 	static bool SpriteSortByTexture(const VertexSprite& v0, const VertexSprite& v1);
 	static bool SpriteSortByDepth(const VertexSprite& v0, const VertexSprite& v1);
+
+	float m_GameTime;
 };

@@ -12,7 +12,7 @@ PxMaterial* Bomb::s_pStaticMaterial{ nullptr };
 std::unordered_map<int, int> Bomb::s_Characters;
 bool Bomb::s_BombExploded{ false };
 
-Bomb::Bomb(int col, int row, const Character* const pOwner, Grid* pGrid)
+Bomb::Bomb(int col, int row, Character* pOwner, Grid* pGrid)
 	:m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_LifeTime{ 3.f }, m_MaxRange{ 3 }, m_StartCol{ col }, m_StartRow{ row }, m_AlreadyExploded{ false }
 {
 	SetTag(L"Bomb");
@@ -51,13 +51,52 @@ void Bomb::Initialize(const SceneContext&)
 	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200));
 
 	//Is kinematic because it can move when you have a power up
-	auto pRigid{ AddComponent(new RigidBodyComponent(false)) };
+	m_pRigid = AddComponent(new RigidBodyComponent(false));
 
-	const auto geo{ PxSphereGeometry{cellSize * 0.5f} };
-	pRigid->AddCollider(geo, *s_pStaticMaterial, false, PxTransform{ 0.f,cellSize * 0.5f,0.f });
-	pRigid->SetConstraint(RigidBodyConstraint::All, false);
-
+	const auto geo{ PxSphereGeometry{cellSize * 0.6f} };
+	m_pRigid->AddCollider(geo, *s_pStaticMaterial, true, PxTransform{ 0.f,cellSize * 0.5f,0.f });
+	m_pRigid->SetConstraint(RigidBodyConstraint::All, false);
 	s_Characters[m_pOwner->GetIndex()] += 1;
+
+	auto triggerCallBack = [=](GameObject*, GameObject* pOther, PxTriggerAction action)
+	{
+		std::wstring tag{ pOther->GetTag() };
+
+		if (tag == L"Player" && m_PlayerCollision == PlayerCollision::disabled)
+		{
+			switch (action)
+			{
+			case PxTriggerAction::ENTER:
+				if (m_LifeTime < 2.5f)
+				{
+					if (m_PlayersInside == 0)
+					{
+						m_PlayerCollision = PlayerCollision::shouldEnable;
+					}
+				}
+				else
+				{
+					++m_PlayersInside;
+				}
+				break;
+			case PxTriggerAction::LEAVE:
+			default:
+				--m_PlayersInside;
+				if (m_PlayersInside == 0)
+				{
+					m_PlayerCollision = PlayerCollision::shouldEnable;
+				}
+				break;
+			}
+		}
+		else if (tag == L"Bomb")
+		{
+			//Explosion chain
+			Explode();
+		}
+	};
+
+	SetOnTriggerCallBack(triggerCallBack);
 }
 
 void Bomb::SetBombMaterials(BaseMaterial* pBombMaterial, PxMaterial* pStaticMaterial)
@@ -68,6 +107,15 @@ void Bomb::SetBombMaterials(BaseMaterial* pBombMaterial, PxMaterial* pStaticMate
 
 void Bomb::Update(const SceneContext& sceneContext)
 {
+	if (m_PlayerCollision == PlayerCollision::shouldEnable)
+	{
+		const auto geo{ PxSphereGeometry{m_pGrid->GetCellSize() * 0.5f} };
+		m_pRigid->AddCollider(geo, *s_pStaticMaterial, false, PxTransform{ 0.f,m_pGrid->GetCellSize() * 0.5f,0.f });
+		m_pRigid->SetConstraint(RigidBodyConstraint::All, false);
+
+		m_PlayerCollision = PlayerCollision::enabled;
+	}
+
 	m_LifeTime -= sceneContext.pGameTime->GetElapsed();
 
 	if (m_LifeTime < 0.f)

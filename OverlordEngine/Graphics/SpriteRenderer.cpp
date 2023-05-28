@@ -12,6 +12,10 @@ void SpriteRenderer::Initialize()
 	QUERY_EFFECT_VARIABLE_HALT(m_pEffect, m_pEVar_TextureSize, gTextureSize, Vector);
 	QUERY_EFFECT_VARIABLE_HALT(m_pEffect, m_pEVar_TextureSRV, gSpriteTexture, ShaderResource);
 
+	//Moving sprites
+	QUERY_EFFECT_VARIABLE_HALT(m_pEffect, m_pEVar_GameTime, gGameTime, Scalar);
+	QUERY_EFFECT_VARIABLE_HALT(m_pEffect, m_pEVar_MoveDirection, gMoveDirection, Vector);
+
 	//Transform Matrix
 	const float scaleX = (m_GameContext.windowWidth > 0) ? 2.0f / float(m_GameContext.windowWidth) : 0;
 	const float scaleY = (m_GameContext.windowHeight > 0) ? 2.0f / float(m_GameContext.windowHeight) : 0;
@@ -124,9 +128,12 @@ void SpriteRenderer::UpdateBuffer(const SceneContext& sceneContext)
 		// unmap the vertex buffer
 		sceneContext.d3dContext.pDeviceContext->Unmap(m_pVertexBuffer, 0);
 	}
+
+	//Update game time
+	m_GameTime = sceneContext.pGameTime->GetTotal();
 }
 
-void SpriteRenderer::Draw(const SceneContext& sceneContext)
+void SpriteRenderer::Draw(const SceneContext& sceneContext, const XMFLOAT2& moveDirection)
 {
 	if (m_Sprites.empty())
 		return;
@@ -164,6 +171,12 @@ void SpriteRenderer::Draw(const SceneContext& sceneContext)
 
 		//Set Transform
 		m_pEVar_TransformMatrix->SetMatrix(&m_Transform._11);
+
+		//Set Move Direction
+		m_pEVar_MoveDirection->SetFloatVector(&moveDirection.x);
+
+		//Set Game Time
+		m_pEVar_GameTime->SetFloat(m_GameTime);
 
 		D3DX11_TECHNIQUE_DESC techDesc{};
 		m_pTechnique->GetDesc(&techDesc);
@@ -261,6 +274,13 @@ void SpriteRenderer::DrawImmediate(const D3D11Context& d3dContext, ID3D11ShaderR
 
 	//Set Transform
 	m_pEVar_TransformMatrix->SetMatrix(&m_Transform._11);
+
+	//Set Move Direction
+	const XMFLOAT2 moveDirection{ 0.f,0.f };
+	m_pEVar_MoveDirection->SetFloatVector(&moveDirection.x);
+
+	//Set Game Time
+	m_pEVar_GameTime->SetFloat(m_GameTime);
 
 	D3DX11_TECHNIQUE_DESC techDesc{};
 	m_pTechnique->GetDesc(&techDesc);

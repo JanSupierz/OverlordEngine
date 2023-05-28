@@ -22,6 +22,8 @@ struct CharacterDesc
 	float moveAccelerationTime{ .3f };
 	float fallAccelerationTime{ .3f };
 
+	float startYaw{};
+
 	PxCapsuleControllerDesc controller{};
 
 	float rotationSpeed{ 60.f };
@@ -63,13 +65,16 @@ public:
 	int GetIndex() const;
 
 	void AddScore();
+	bool GetIsActive() const { return m_IsActive; }
+	void SetIsActive(bool isActive);
+
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
 	void UpdateAnimations(const SceneContext& sceneContext);
 
 private:
-	void PlaceBomb() const;
+	void PlaceBomb();
 
 	ControllerComponent* m_pControllerComponent{};
 
@@ -87,5 +92,6 @@ private:
 	Grid* m_pGrid;
 	int m_Score;
 	bool m_CanPlaceBomb;
+	bool m_IsActive{true};
 };
 

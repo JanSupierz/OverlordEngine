@@ -1,6 +1,8 @@
 float4x4 gTransform : WorldViewProjection;
 Texture2D gSpriteTexture;
 float2 gTextureSize;
+float gGameTime = 0.f;
+float2 gMoveDirection = float2(0.5f, 0.f);
 
 SamplerState samPoint
 {
@@ -75,7 +77,7 @@ void CreateVertex(inout TriangleStream<GS_DATA> triStream, float3 pos, float4 co
     GS_DATA geomData = (GS_DATA) 0;
     geomData.Position = mul(float4(pos, 1.0f), gTransform);
     geomData.Color = col;
-    geomData.TexCoord = texCoord;
+    geomData.TexCoord = texCoord + gMoveDirection * gGameTime;
     triStream.Append(geomData);
 }
 
