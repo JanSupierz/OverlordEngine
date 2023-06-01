@@ -26,20 +26,20 @@ void MainMenuScene::Initialize()
 	m_SceneContext.settings.enableOnGUI = true;
 
 	auto pBackGroundImage{ AddChild(new GameObject()) };
-	pBackGroundImage->AddComponent(new SpriteComponent(L"Textures/StartScreenStatic.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f }));
+	pBackGroundImage->AddComponent(new SpriteComponent(L"Textures/Menu/StartScreenStatic.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f }));
 
 	pBackGroundImage->GetTransform()->Translate(m_SceneContext.windowWidth / 2.f, m_SceneContext.windowHeight / 2.f, .9f);
 	pBackGroundImage->GetTransform()->Scale(0.7f, 0.7f, 1.f);
 
 	auto pFrontMovingImage{ AddChild(new GameObject()) };
-	auto pSprite{ pFrontMovingImage->AddComponent(new SpriteComponent(L"Textures/StartScreenMoving2.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f })) };
+	auto pSprite{ pFrontMovingImage->AddComponent(new SpriteComponent(L"Textures/Menu/StartScreenMoving2.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f })) };
 	pSprite->SetMoveDirection(XMFLOAT2{ 0.02f, 0.f });
 
 	pFrontMovingImage->GetTransform()->Translate(m_SceneContext.windowWidth / 2.f, m_SceneContext.windowHeight / 2.f, .8f);
 	pFrontMovingImage->GetTransform()->Scale(0.7f, 0.7f, 1.f);
 
 	pFrontMovingImage = AddChild(new GameObject());
-	pSprite = pFrontMovingImage->AddComponent(new SpriteComponent(L"Textures/StartScreenMoving1.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f }));
+	pSprite = pFrontMovingImage->AddComponent(new SpriteComponent(L"Textures/Menu/StartScreenMoving1.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f }));
 	pSprite->SetMoveDirection(XMFLOAT2{ -0.03f, 0.f });
 
 	pFrontMovingImage->GetTransform()->Translate(m_SceneContext.windowWidth / 2.f, m_SceneContext.windowHeight / 2.f, .7f);
@@ -52,10 +52,15 @@ void MainMenuScene::Initialize()
 
 	SetActiveCamera(m_pFixedCamera->GetComponent<CameraComponent>());
 
-	m_PlayerTextureNames.emplace_back(L"Textures/Bomberman/Icon_White.png");
-	m_PlayerTextureNames.emplace_back(L"Textures/Bomberman/Icon_Black.png");
-	m_PlayerTextureNames.emplace_back(L"Textures/Bomberman/Icon_Red.png");
-	m_PlayerTextureNames.emplace_back(L"Textures/Bomberman/Icon_Blue.png");
+	m_PlayerTextureNames.emplace_back(L"Textures/Menu/Icon_White.png");
+	m_PlayerTextureNames.emplace_back(L"Textures/Menu/Icon_Black.png");
+	m_PlayerTextureNames.emplace_back(L"Textures/Menu/Icon_Red.png");
+	m_PlayerTextureNames.emplace_back(L"Textures/Menu/Icon_Blue.png");
+
+	m_PlayerUITextureNames.emplace_back(L"Textures/GameUI/White_UI.png");
+	m_PlayerUITextureNames.emplace_back(L"Textures/GameUI/Black_UI.png");
+	m_PlayerUITextureNames.emplace_back(L"Textures/GameUI/Red_UI.png");
+	m_PlayerUITextureNames.emplace_back(L"Textures/GameUI/Blue_UI.png");
 
 	m_Texts.emplace_back("P1");
 	m_Texts.emplace_back("P2");
@@ -106,6 +111,14 @@ void MainMenuScene::Initialize()
 	}
 
 	m_pIcons[m_pIcons.size() - 1]->SetNext(m_pIcons[0]);
+
+	//Sound 2D
+	const auto pFmod = SoundManager::Get()->GetSystem();
+
+	FMOD::Sound* pSound2D{ nullptr };
+	pFmod->createStream("Resources/Sounds/Menu.mp3", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &pSound2D);
+	pFmod->playSound(pSound2D, nullptr, true, &m_pChannel2D);
+	m_pChannel2D->setVolume(0.2f);
 }
 
 void MainMenuScene::Update()
@@ -220,7 +233,8 @@ void MainMenuScene::Update()
 					playerDesc.pGoldMaterial = pGoldMaterial;
 					playerDesc.pGlovesMaterial = pPinkMaterial;
 					playerDesc.pSkinMaterial = pSkinMaterial;
-					playerDesc.spriteName = m_PlayerTextureNames[0];
+					playerDesc.spriteName = m_PlayerUITextureNames[0];
+					playerDesc.displayedText = m_PlayerTexts[playerDesc.index];
 
 					pCurrent->InitPlayer(playerDesc);
 				}
@@ -234,7 +248,8 @@ void MainMenuScene::Update()
 					playerDesc.pGoldMaterial = pGoldMaterial;
 					playerDesc.pGlovesMaterial = pPinkMaterial;
 					playerDesc.pSkinMaterial = pSkinMaterial;
-					playerDesc.spriteName = m_PlayerTextureNames[1];
+					playerDesc.spriteName = m_PlayerUITextureNames[1];
+					playerDesc.displayedText = m_PlayerTexts[playerDesc.index];
 
 					pCurrent->InitPlayer(playerDesc);
 				}
@@ -248,7 +263,8 @@ void MainMenuScene::Update()
 					playerDesc.pGoldMaterial = pGoldMaterial;
 					playerDesc.pGlovesMaterial = pPinkMaterial;
 					playerDesc.pSkinMaterial = pSkinMaterial;
-					playerDesc.spriteName = m_PlayerTextureNames[2];
+					playerDesc.spriteName = m_PlayerUITextureNames[2];
+					playerDesc.displayedText = m_PlayerTexts[playerDesc.index];
 
 					pCurrent->InitPlayer(playerDesc);
 				}
@@ -262,7 +278,8 @@ void MainMenuScene::Update()
 					playerDesc.pGoldMaterial = pGoldMaterial;
 					playerDesc.pGlovesMaterial = pPinkMaterial;
 					playerDesc.pSkinMaterial = pSkinMaterial;
-					playerDesc.spriteName = m_PlayerTextureNames[3];
+					playerDesc.spriteName = m_PlayerUITextureNames[3];
+					playerDesc.displayedText = m_PlayerTexts[playerDesc.index];
 
 					pCurrent->InitPlayer(playerDesc);
 				}
@@ -280,6 +297,16 @@ void MainMenuScene::Draw()
 
 void MainMenuScene::OnGUI()
 {
+}
+
+void MainMenuScene::OnSceneActivated()
+{
+	m_pChannel2D->setPaused(false);
+}
+
+void MainMenuScene::OnSceneDeactivated()
+{
+	m_pChannel2D->setPaused(true);
 }
 
 void MainMenuScene::AddPlayer(int gamepadIndex)

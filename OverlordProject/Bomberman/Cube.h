@@ -20,4 +20,6 @@ public:
 private:
 	Node* m_pNode;
 	Grid* m_pGrid;
+
+	bool m_IsRemoved{ false };
 };

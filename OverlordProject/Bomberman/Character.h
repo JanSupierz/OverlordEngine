@@ -2,6 +2,7 @@
 
 class ModelAnimator;
 class Grid;
+class PlayerGameIcon;
 
 struct CharacterDesc
 {
@@ -68,12 +69,16 @@ public:
 	bool GetIsActive() const { return m_IsActive; }
 	void SetIsActive(bool isActive);
 
+	void SetIcon(PlayerGameIcon* pIcon);
+	void UpdateScore();
+	int GetScore() const { return m_Score; }
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
-	void UpdateAnimations(const SceneContext& sceneContext);
 
 private:
+	void HandleInput(const SceneContext&);
+	void UpdateAnimations(const SceneContext& sceneContext);
 	void PlaceBomb();
 
 	ControllerComponent* m_pControllerComponent{};
@@ -87,10 +92,16 @@ private:
 
 	XMFLOAT3 m_TotalVelocity{};						//TotalVelocity with X/Z for Horizontal Movement AND Y for Vertical Movement (fall/jump)
 	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
+
+	//Animations
 	ModelAnimator* m_pAnimator{ nullptr };
 	CharacterAction m_CurrentAction{ CharacterAction::standing };
+
+	//Bomberman
 	Grid* m_pGrid;
+	PlayerGameIcon* m_pIcon{};
 	int m_Score;
+	bool m_ScoreChanged{false};
 	bool m_CanPlaceBomb;
 	bool m_IsActive{true};
 };

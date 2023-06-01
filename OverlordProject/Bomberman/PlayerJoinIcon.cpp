@@ -17,6 +17,11 @@ void PlayerJoinIcon::Initialize(const SceneContext&)
 
 void PlayerJoinIcon::Update(const SceneContext&)
 {
+
+}
+
+void PlayerJoinIcon::Draw(const SceneContext&)
+{
 	if (!IsFree())
 	{
 		TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_Text), m_TextPosition, m_TextColor);

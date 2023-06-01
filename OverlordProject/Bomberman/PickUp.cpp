@@ -2,6 +2,7 @@
 #include "Scenes/BombermanScene.h"
 #include "PickUp.h"
 #include "Grid.h"
+#include "Character.h"
 
 std::unordered_map<PickUpType, BaseMaterial*> PickUp::s_pPickUpMaterials{};
 PxMaterial* PickUp::s_pStaticMaterial{ nullptr };
@@ -57,6 +58,26 @@ void PickUp::Initialize(const SceneContext&)
 	pRigid->AddCollider(geo, *s_pStaticMaterial, true, PxTransform{ 0.f,cellSize * 0.5f,0.f });
 
 	pRigid->SetConstraint(RigidBodyConstraint::All, false);
+
+	auto triggerCallBack = [=](GameObject*, GameObject* pOther, PxTriggerAction action)
+	{
+		if (action == PxTriggerAction::ENTER && m_IsActive)
+		{
+			std::wstring tag{ pOther->GetTag() };
+
+			if (tag == L"Player")
+			{
+				//Other player gains a point
+				Character* pCharacter = static_cast<Character*>(pOther);
+				pCharacter->AddScore();
+
+				BombermanScene::RemoveGameObject(this);
+				m_IsActive = false;
+			}
+		}
+	};
+
+	SetOnTriggerCallBack(triggerCallBack);
 }
 
 void PickUp::SetPhysicsMaterial(PxMaterial* pStaticMaterial)

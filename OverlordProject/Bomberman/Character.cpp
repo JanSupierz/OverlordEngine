@@ -3,6 +3,7 @@
 #include "Bomberman/Bomb.h"
 #include "Bomberman/Grid.h"
 #include "Scenes/BombermanScene.h"
+#include "PlayerGameIcon.h"
 
 Character::Character(const CharacterDesc& characterDesc, Grid* pGrid) :
 	m_CharacterDesc{ characterDesc }, m_pGrid{ pGrid },
@@ -21,163 +22,170 @@ void Character::Initialize(const SceneContext& /*sceneContext*/)
 
 void Character::Update(const SceneContext& sceneContext)
 {
-	if (!m_IsActive) return;
+	if (m_IsActive)
+	{
+		//Input
+		HandleInput(sceneContext);
 
+		//Animations
+		UpdateAnimations(sceneContext);
+	}
+}
+
+void Character::HandleInput(const SceneContext& sceneContext)
+{
 	constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
 	const float elapsedSec{ sceneContext.pGameTime->GetElapsed() };
-	
+
 	//***************
 	//HANDLE INPUT
 	switch (m_CurrentAction)
 	{
-		case CharacterAction::running:
-		case CharacterAction::standing:
+	case CharacterAction::running:
+	case CharacterAction::standing:
+	{
+		bool placeBombTriggered{ sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_PlaceBomb) };
+
+		XMFLOAT2 move{ 0.f,0.f };
+		if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveForward))
 		{
-			bool placeBombTriggered{ sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_PlaceBomb) };
+			move.y = 1.f;
+		}
+		else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveBackward))
+		{
+			move.y = -1.f;
+		}
 
-			XMFLOAT2 move{ 0.f,0.f };
-			if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveForward))
+		//Optional: if move.y is near zero (abs(move.y) < epsilon), you could use the ThumbStickPosition.y for movement
+		if (abs(move.y) < epsilon)
+		{
+			move.y = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).y;
+		}
+
+		//move.x should contain a 1 (Right) or -1 (Left) based on the active input (check corresponding actionId in m_CharacterDesc)
+		if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveRight))
+		{
+			move.x = 1.f;
+		}
+		else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveLeft))
+		{
+			move.x = -1.f;
+		}
+
+		//Optional: if move.x is near zero (abs(move.x) < epsilon), you could use the Left ThumbStickPosition.x for movement
+		if (abs(move.x) < epsilon)
+		{
+			move.x = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).x;
+		}
+
+		//********
+		//MOVEMENT
+		const XMVECTOR worldForward{ 0.f,0.f,1.f };
+		const XMVECTOR worldRight{ 1.f,0.f,0.f };
+
+		//## Horizontal Velocity (Forward/Backward/Right/Left)
+		//Calculate the current move acceleration for this frame (m_MoveAcceleration * ElapsedTime)
+		const float acceleration{ m_MoveAcceleration * elapsedSec };
+
+		//If the character is moving (= input is pressed)
+		if (abs(move.x) > epsilon || abs(move.y) > epsilon)
+		{
+			m_CurrentAction = CharacterAction::running;
+
+			//Calculate & Store the current direction (m_CurrentDirection) >> based on the forward/right vectors and the pressed input
+			const XMVECTOR direction{ worldForward * move.y + worldRight * move.x };
+			XMStoreFloat3(&m_CurrentDirection, direction);
+
+			//Increase the current MoveSpeed with the current Acceleration (m_MoveSpeed)
+			m_MoveSpeed += acceleration;
+
+			//Make sure the current MoveSpeed stays below the maximum MoveSpeed (CharacterDesc::maxMoveSpeed)
+			m_MoveSpeed = std::min(m_MoveSpeed, m_CharacterDesc.maxMoveSpeed);
+
+			//--- Lerp to move direction ---
+			const XMVECTOR normalizedDirection{ XMVector3Normalize(direction) };
+			const XMVECTOR playerRotation{ XMLoadFloat3(&GetTransform()->GetForward()) };
+
+			const float angleDistanceInRadians{ XMVectorGetX(XMVector3AngleBetweenNormals(normalizedDirection, playerRotation)) };
+			const float angleDistance{ XMConvertToDegrees(angleDistanceInRadians) };
+
+			constexpr float rotationEpsilon{ 4.f };
+			if (angleDistance > rotationEpsilon)
 			{
-				move.y = 1.f;
-			}
-			else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveBackward))
-			{
-				move.y = -1.f;
-			}
+				const XMVECTOR perpendicular{ XMLoadFloat3(&GetTransform()->GetRight()) };
 
-			//Optional: if move.y is near zero (abs(move.y) < epsilon), you could use the ThumbStickPosition.y for movement
-			if (abs(move.y) < epsilon)
-			{
-				move.y = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).y;
-			}
+				//Check sign
+				const float dot{ XMVectorGetX(XMVector3Dot(perpendicular, normalizedDirection)) };
+				const int sign{ dot > 0.f ? 1 : -1 };
 
-			//move.x should contain a 1 (Right) or -1 (Left) based on the active input (check corresponding actionId in m_CharacterDesc)
-			if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveRight))
-			{
-				move.x = 1.f;
-			}
-			else if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveLeft))
-			{
-				move.x = -1.f;
-			}
+				//Rotate
+				m_TotalYaw += sign * m_CharacterDesc.rotationSpeed * angleDistance * elapsedSec;
 
-			//Optional: if move.x is near zero (abs(move.x) < epsilon), you could use the Left ThumbStickPosition.x for movement
-			if (abs(move.x) < epsilon)
-			{
-				move.x = sceneContext.pInput->GetThumbstickPosition(true, m_CharacterDesc.gamepadIndex).x;
-			}
-
-			//********
-			//MOVEMENT
-			const XMVECTOR worldForward{ 0.f,0.f,1.f };
-			const XMVECTOR worldRight{ 1.f,0.f,0.f };
-
-			//## Horizontal Velocity (Forward/Backward/Right/Left)
-			//Calculate the current move acceleration for this frame (m_MoveAcceleration * ElapsedTime)
-			const float acceleration{ m_MoveAcceleration * elapsedSec };
-
-			//If the character is moving (= input is pressed)
-			if (abs(move.x) > epsilon || abs(move.y) > epsilon)
-			{
-				m_CurrentAction = CharacterAction::running;
-
-				//Calculate & Store the current direction (m_CurrentDirection) >> based on the forward/right vectors and the pressed input
-				const XMVECTOR direction{ worldForward * move.y + worldRight * move.x };
-				XMStoreFloat3(&m_CurrentDirection, direction);
-
-				//Increase the current MoveSpeed with the current Acceleration (m_MoveSpeed)
-				m_MoveSpeed += acceleration;
-
-				//Make sure the current MoveSpeed stays below the maximum MoveSpeed (CharacterDesc::maxMoveSpeed)
-				m_MoveSpeed = std::min(m_MoveSpeed, m_CharacterDesc.maxMoveSpeed);
-
-				//--- Lerp to move direction ---
-				const XMVECTOR normalizedDirection{ XMVector3Normalize(direction) };
-				const XMVECTOR playerRotation{ XMLoadFloat3(&GetTransform()->GetForward()) };
-
-				const float angleDistanceInRadians{ XMVectorGetX(XMVector3AngleBetweenNormals(normalizedDirection, playerRotation)) };
-				const float angleDistance{ XMConvertToDegrees(angleDistanceInRadians) };
-
-				constexpr float rotationEpsilon{ 4.f };
-				if (angleDistance > rotationEpsilon)
+				//Prevent overflow
+				if (abs(m_TotalYaw) > 360.f)
 				{
-					const XMVECTOR perpendicular{ XMLoadFloat3(&GetTransform()->GetRight()) };
-
-					//Check sign
-					const float dot{ XMVectorGetX(XMVector3Dot(perpendicular, normalizedDirection)) };
-					const int sign{ dot > 0.f ? 1 : -1 };
-
-					//Rotate
-					m_TotalYaw += sign * m_CharacterDesc.rotationSpeed * angleDistance * elapsedSec;
-
-					//Prevent overflow
-					if (abs(m_TotalYaw) > 360.f)
-					{
-						m_TotalYaw -= 360.f * m_TotalYaw / abs(m_TotalYaw);
-					}
-
-					GetTransform()->Rotate(0.f, m_TotalYaw, 0.f);
-				}
-			}
-			else
-			{
-				//Decrease the current MoveSpeed with the current Acceleration (m_MoveSpeed)
-				m_MoveSpeed -= acceleration;
-
-				if (m_MoveSpeed <= epsilon)
-				{
-					m_CurrentAction = CharacterAction::standing;
+					m_TotalYaw -= 360.f * m_TotalYaw / abs(m_TotalYaw);
 				}
 
-				//Make sure the current MoveSpeed doesn't get smaller than zero
-				m_MoveSpeed = std::max(m_MoveSpeed, 0.0f);
+				GetTransform()->Rotate(0.f, m_TotalYaw, 0.f);
 			}
+		}
+		else
+		{
+			//Decrease the current MoveSpeed with the current Acceleration (m_MoveSpeed)
+			m_MoveSpeed -= acceleration;
 
-			//Calculate the horizontal velocity (m_CurrentDirection * MoveSpeed)
-			m_TotalVelocity.x = m_CurrentDirection.x * m_MoveSpeed;
-			m_TotalVelocity.z = m_CurrentDirection.z * m_MoveSpeed;
-
-			//If the Controller Component is NOT grounded (= freefall)
-			if (!(m_pControllerComponent->GetCollisionFlags() & PxControllerCollisionFlag::eCOLLISION_DOWN))
+			if (m_MoveSpeed <= epsilon)
 			{
-				//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
-				m_TotalVelocity.y -= m_FallAcceleration * elapsedSec;
-
-				//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
-				m_TotalVelocity.y = std::max(m_TotalVelocity.y, -m_CharacterDesc.maxFallSpeed);
+				m_CurrentAction = CharacterAction::standing;
 			}
-			else
+
+			//Make sure the current MoveSpeed doesn't get smaller than zero
+			m_MoveSpeed = std::max(m_MoveSpeed, 0.0f);
+		}
+
+		//Calculate the horizontal velocity (m_CurrentDirection * MoveSpeed)
+		m_TotalVelocity.x = m_CurrentDirection.x * m_MoveSpeed;
+		m_TotalVelocity.z = m_CurrentDirection.z * m_MoveSpeed;
+
+		//If the Controller Component is NOT grounded (= freefall)
+		if (!(m_pControllerComponent->GetCollisionFlags() & PxControllerCollisionFlag::eCOLLISION_DOWN))
+		{
+			//Decrease the y component of m_TotalVelocity with a fraction (ElapsedTime) of the Fall Acceleration (m_FallAcceleration)
+			m_TotalVelocity.y -= m_FallAcceleration * elapsedSec;
+
+			//Make sure that the minimum speed stays above -CharacterDesc::maxFallSpeed (negative!)
+			m_TotalVelocity.y = std::max(m_TotalVelocity.y, -m_CharacterDesc.maxFallSpeed);
+		}
+		else
+		{
+			//m_TotalVelocity.y is zero
+			m_TotalVelocity.y = 0.f;
+
+			if (placeBombTriggered)
 			{
-				//m_TotalVelocity.y is zero
-				m_TotalVelocity.y = 0.f;
-
-				if (placeBombTriggered)
-				{
-					m_CurrentAction = CharacterAction::placingBomb;
-				}
+				m_CurrentAction = CharacterAction::placingBomb;
 			}
+		}
 
-			//************
-			//DISPLACEMENT
-			m_pControllerComponent->Move(XMFLOAT3{ m_TotalVelocity.x * elapsedSec ,m_TotalVelocity.y * elapsedSec ,m_TotalVelocity.z * elapsedSec });
+		//************
+		//DISPLACEMENT
+		m_pControllerComponent->Move(XMFLOAT3{ m_TotalVelocity.x * elapsedSec ,m_TotalVelocity.y * elapsedSec ,m_TotalVelocity.z * elapsedSec });
+	}
+	break;
+	case CharacterAction::placingBomb:
+		m_CanPlaceBomb = true;
+		break;
+	case CharacterAction::stopPlacing:
+		if (m_CanPlaceBomb)
+		{
+			PlaceBomb();
+			m_CanPlaceBomb = false;
 		}
 		break;
-		case CharacterAction::placingBomb:
-			m_CanPlaceBomb = true;
-			break;
-		case CharacterAction::stopPlacing:
-			if (m_CanPlaceBomb)
-			{
-				PlaceBomb();
-				m_CanPlaceBomb = false;
-			}
-			break;
-		default:
-			break;
+	default:
+		break;
 	}
-
-	//Animations
-	UpdateAnimations(sceneContext);
 }
 
 void Character::UpdateAnimations(const SceneContext& sceneContext)
@@ -302,6 +310,7 @@ int Character::GetIndex() const
 void Character::AddScore()
 {
 	++m_Score;
+	m_ScoreChanged = true;
 }
 
 void Character::SetIsActive(bool isActive)
@@ -311,5 +320,19 @@ void Character::SetIsActive(bool isActive)
 	if (!m_IsActive)
 	{
 		GetTransform()->Translate(0.f, 100.f, -200.f);
+	}
+}
+
+void Character::SetIcon(PlayerGameIcon* pIcon)
+{
+	m_pIcon = pIcon;
+}
+
+void Character::UpdateScore()
+{
+	if (m_ScoreChanged)
+	{
+		m_pIcon->AddStar();
+		m_ScoreChanged = false;
 	}
 }

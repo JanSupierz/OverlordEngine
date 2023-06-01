@@ -20,6 +20,8 @@ struct PlayerDesc
 	ColorMaterial_Shadow_Skinned* pGoldMaterial{};
 	PxMaterial* pPxMaterial;
 
+	std::string displayedText{};
+
 	int index{ 0 };
 
 	std::wstring spriteName{};
@@ -54,7 +56,11 @@ protected:
 	void Draw() override;
 	void OnGUI() override;
 
+	virtual void OnSceneActivated() override;
+	virtual void OnSceneDeactivated() override;
+
 private:
+	void UpdateCamera();
 	void InitArena();
 	void CreateCube(bool isDestructible, int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset = 0.f, float scale = 1.f, bool disableRigid = false);
 
@@ -91,6 +97,26 @@ private:
 	const float m_MaxScreenShakeDuration{ 0.5f };
 	float m_ScreenShakeTimer{};
 
+	std::string m_EndText{ "Draw!" };
+	XMFLOAT2 m_EndTextPosition{};
+
+	//Sounds
+	FMOD::Channel* m_pChannel2D{ nullptr };
+	FMOD::Channel* m_pChannel3D{ nullptr };
+	FMOD_VECTOR m_PrevCamPos{};
+	FMOD::Sound* m_pBombSound3D{ nullptr };
+
+	//UI
+	SpriteFont* m_pFont{};
+	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
+	std::string m_TimerText{ "2:00" };
+	XMFLOAT2 m_TimerTextPosition{};
+	float m_TimeLeft{ 0.5f };
+	int m_NrMinutes{ 3 };
+	int m_NrSeconds{ 0 };
+	bool m_GameEnded{false};
+
+	//Statics
 	static std::vector<GameObject*> s_pObjectsToAdd;
 	static std::vector<GameObject*> s_pObjectsToRemove;
 	static bool s_CheckVectors;

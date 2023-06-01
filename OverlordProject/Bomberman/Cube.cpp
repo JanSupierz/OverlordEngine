@@ -17,6 +17,9 @@ Cube::~Cube()
 
 void Cube::DestroyCube()
 {
+	if (m_IsRemoved) return;
+
+	m_IsRemoved = true;
 	m_pNode->SetCellState(CellState::Empty);
 
 	//Spawn a random pickUp

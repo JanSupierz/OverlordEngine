@@ -21,6 +21,7 @@
 #include "Bomberman/Cube.h"
 #include "Bomberman/PickUp.h"
 #include "Materials/Post/PostChromaticAberration.h"
+#include "Bomberman/PlayerGameIcon.h"
 
 std::vector<GameObject*> BombermanScene::s_pObjectsToAdd{};
 std::vector<GameObject*> BombermanScene::s_pObjectsToRemove{};
@@ -97,10 +98,49 @@ void BombermanScene::Initialize()
 	m_pChromatic = MaterialManager::Get()->CreateMaterial<PostChromaticAberration>();
 	m_pChromatic->SetIsEnabled(false);
 	AddPostProcessingEffect(m_pChromatic);
+
+	//Sound 2D
+	const auto pFmod = SoundManager::Get()->GetSystem();
+
+	FMOD::Sound* pSound2D{ nullptr };
+	pFmod->createStream("Resources/Sounds/Arena.mp3", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &pSound2D);
+	pFmod->playSound(pSound2D, nullptr, true, &m_pChannel2D);
+	m_pChannel2D->setVolume(0.001f);
+
+	m_TimerTextPosition.x = m_SceneContext.windowWidth / 2.f;
+	m_TimerTextPosition.y = 5.f;
+
+	m_pFont = ContentManager::Load<SpriteFont>(L"SpriteFonts/Consolas_32.fnt");
+
+	auto pTimerImage{ AddChild(new GameObject()) };
+	pTimerImage->AddComponent(new SpriteComponent(L"Textures/GameUI/Timer.png", { 0.5f,0.f }, { 1.f,1.f,1.f,1.f }));
+	pTimerImage->GetTransform()->Translate(m_TimerTextPosition.x, m_TimerTextPosition.y, 0.01f);
+	pTimerImage->GetTransform()->Scale(0.5f);
+
+	m_TimerTextPosition.x -= 36.f;
+	m_TimerTextPosition.y = 20.f;
+
+	pFmod->createStream("Resources/Sounds/bomb_explosion.ogg", FMOD_3D | FMOD_LOOP_OFF | FMOD_3D_LINEARROLLOFF, nullptr, &m_pBombSound3D);
+	m_pChannel3D->set3DMinMaxDistance(0.f, 1000.f);
+
+	//End Text
+	m_EndTextPosition.x = m_SceneContext.windowWidth / 2.f;
+	m_EndTextPosition.y = m_SceneContext.windowHeight / 2.f;
+}
+
+inline FMOD_VECTOR ToFmod(XMFLOAT3 v) //DirectX
+{
+	return FMOD_VECTOR(v.x, v.y, v.z); //FMod
+}
+
+inline FMOD_VECTOR ToFmod(PxVec3 v) //PhysX
+{
+	return FMOD_VECTOR(v.x, v.y, v.z); //FMod
 }
 
 void BombermanScene::Update()
 {
+	//Check if any object should be added/deleted
 	if (s_CheckVectors)
 	{
 		for (auto pObject : s_pObjectsToAdd)
@@ -117,12 +157,25 @@ void BombermanScene::Update()
 		s_pObjectsToRemove.clear();
 	}
 
+	//Check if we need a screen shake
 	if (Bomb::CheckExplosion())
 	{
 		m_ScreenShakeTimer = m_MaxScreenShakeDuration;
+	
+		SoundManager::Get()->GetSystem()->playSound(m_pBombSound3D, nullptr, false, &m_pChannel3D);
+
 		m_pChromatic->SetIsEnabled(true);
 	}
 
+	for (Character* pCharacter : m_pCharacters)
+	{
+		if (pCharacter)
+		{
+			pCharacter->UpdateScore();
+		}
+	}
+
+	//Update the screen shake timer
 	if (m_ScreenShakeTimer > 0.f)
 	{
 		m_ScreenShakeTimer -= m_SceneContext.pGameTime->GetElapsed();
@@ -133,69 +186,119 @@ void BombermanScene::Update()
 		}
 	}
 
-	XMFLOAT3 cameraPosition{};
-	XMVECTOR cameraVector{ XMLoadFloat3(&cameraPosition) };
-	int nrPlayers{};
-	float largestDistance{};
+	UpdateCamera();
 
-	for (Character* pCharacter : m_pCharacters)
+	//Update game timer
+	if (m_TimeLeft > 0.f)
 	{
-		if (pCharacter && pCharacter->GetIsActive())
+		m_TimeLeft -= m_SceneContext.pGameTime->GetElapsed();
+
+		const int timeLeftSeconds{ static_cast<int>(m_TimeLeft) };
+		const int newMinutes{ timeLeftSeconds / 60 };
+		const int newSeconds{ timeLeftSeconds % 60 };
+
+		if (newMinutes != m_NrMinutes || newSeconds != m_NrSeconds)
 		{
-			XMFLOAT3 position{ pCharacter->GetTransform()->GetWorldPosition() };
-			XMVECTOR positionVector{ XMLoadFloat3(&position) };
+			m_NrMinutes = newMinutes;
+			m_NrSeconds = newSeconds;
 
-			cameraVector += positionVector;
-			++nrPlayers;
-
-			//Get largest distance between players
-			for (Character* pOther : m_pCharacters)
-			{
-				if (pOther != pCharacter && pOther && pOther->GetIsActive())
-				{
-					XMFLOAT3 otherPosition{ pOther->GetTransform()->GetWorldPosition() };
-					XMVECTOR otherVector{ XMLoadFloat3(&otherPosition) };
-					
-					const float distance{ XMVectorGetX(XMVector3Length(otherVector - positionVector)) };
-					if (distance > largestDistance)
-					{
-						largestDistance = distance;
-					}
-				}
-			}
+			std::ostringstream timerTextStream;
+			timerTextStream << std::setw(2) << std::setfill('0') << m_NrMinutes << ":" << std::setw(2) << std::setfill('0') << m_NrSeconds;
+			m_TimerText = timerTextStream.str();
 		}
 	}
+	else if (!m_GameEnded)
+	{
+		int highestScore{ -1 };
+		Character* pWinner{};
 
-	//Average player position
-	if(nrPlayers > 0)
-	cameraVector /= static_cast<float>(nrPlayers);
+		for (Character* pCharacter : m_pCharacters)
+		{
+			if (pCharacter)
+			{
+				int score{ pCharacter->GetScore() };
 
-	//Lerp towards the desired position
-	const float t{ m_SceneContext.pGameTime->GetElapsed() * 1.1f };
-	cameraVector = XMVectorLerp(XMLoadFloat3(&m_LastCameraPosition), cameraVector, t);
+				//Is active
+				if (pCharacter->GetIsActive())
+				{
+					if (score > highestScore)
+					{
+						highestScore = score;
+						pWinner = pCharacter;
+					}
+					//Last winner is not alive or there is no other winner
+					else if (!pWinner || (pWinner && !pWinner->GetIsActive()))
+					{
+						highestScore = score;
+						pWinner = pCharacter;
+					}
+				}
+				//Last winner is not alive or there is no other winner
+				else if(!pWinner || (pWinner && !pWinner->GetIsActive()))
+				{
+					highestScore = score;
+					pWinner = pCharacter;
+				}
 
-	XMStoreFloat3(&cameraPosition, cameraVector);
+				pCharacter->SetIsActive(false);
+			}
+		}
 
-	m_LastCameraPosition = cameraPosition;
+		if (pWinner)
+		{
+			auto pBackGroundImage{ AddChild(new GameObject()) };
+			pBackGroundImage->AddComponent(new SpriteComponent(L"Textures/GameUI/EndRect.png", { 0.5f,0.5f }, { 1.f,1.f,1.f,1.f }));
 
-	//Fov interpolation
-	const float fov{ XM_PIDIV4 - (1.f - (largestDistance / 80.0f)) * XM_PIDIV4 * 0.1f };
-	m_LastFov = std::lerp(m_LastFov, fov, t);
+			pBackGroundImage->GetTransform()->Translate(m_SceneContext.windowWidth / 2.f, m_SceneContext.windowHeight / 2.f, 0.01f);
+			pBackGroundImage->GetTransform()->Scale(3.f, 0.4f, 1.f);
 
-	m_pCameraComp->SetFieldOfView(m_LastFov);
+			m_EndText = "Player " + std::to_string(pWinner->GetIndex()) + " Wins!";
+			m_EndTextPosition.x -= 100.f;
+		}
 
-	//Add basic offset
-	cameraVector += XMLoadFloat3(&m_DefaultCameraOffset);
+		m_GameEnded = true;
+	}
 
-	m_pFixedCamera->GetTransform()->Translate(cameraVector);
+	//3D Sound Attributes
+	auto pCam = m_pFixedCamera->GetTransform();
+	auto pos = ToFmod(pCam->GetPosition());
+	auto forward = ToFmod(pCam->GetForward());
+	auto up = ToFmod(pCam->GetUp());
+
+	FMOD_VECTOR vel{};
+	const float deltaT = m_SceneContext.pGameTime->GetElapsed();
+	vel.x = (pos.x - m_PrevCamPos.x) / deltaT;
+	vel.y = (pos.y - m_PrevCamPos.y) / deltaT;
+	vel.z = (pos.z - m_PrevCamPos.z) / deltaT;
+	m_PrevCamPos = pos;
+
+	SoundManager::Get()->GetSystem()->set3DListenerAttributes(0, &pos, &vel, &forward, &up);
 }
 
 void BombermanScene::Draw()
 {
+	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_TimerText), m_TimerTextPosition, m_TextColor);
+
+	if (m_GameEnded)
+	{
+		TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_EndText), m_EndTextPosition, m_TextColor);
+	}
 }
 
 void BombermanScene::OnGUI()
 {
+}
+
+void BombermanScene::OnSceneActivated()
+{
+	m_pChannel2D->setPaused(false);
+	m_pChannel3D->setPaused(false);
+}
+
+void BombermanScene::OnSceneDeactivated()
+{
+	m_pChannel2D->setPaused(true);
+	m_pChannel3D->setPaused(true);
 }
 
 void BombermanScene::CreateCube(bool isDestructible, int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset, float scale, bool disableRigidBody)
@@ -248,6 +351,65 @@ void BombermanScene::CreateCube(bool isDestructible, int col, int row, int heigh
 	{
 		pRigid->SetConstraint(RigidBodyConstraint::All, false);
 	}
+}
+
+void BombermanScene::UpdateCamera()
+{
+	//Make the camera follow the center of action
+	XMFLOAT3 cameraPosition{};
+	XMVECTOR cameraVector{ XMLoadFloat3(&cameraPosition) };
+	int nrPlayers{};
+	float largestDistance{};
+
+	for (Character* pCharacter : m_pCharacters)
+	{
+		if (pCharacter && pCharacter->GetIsActive())
+		{
+			XMFLOAT3 position{ pCharacter->GetTransform()->GetWorldPosition() };
+			XMVECTOR positionVector{ XMLoadFloat3(&position) };
+
+			cameraVector += positionVector;
+			++nrPlayers;
+
+			//Get largest distance between players
+			for (Character* pOther : m_pCharacters)
+			{
+				if (pOther != pCharacter && pOther && pOther->GetIsActive())
+				{
+					XMFLOAT3 otherPosition{ pOther->GetTransform()->GetWorldPosition() };
+					XMVECTOR otherVector{ XMLoadFloat3(&otherPosition) };
+
+					const float distance{ XMVectorGetX(XMVector3Length(otherVector - positionVector)) };
+					if (distance > largestDistance)
+					{
+						largestDistance = distance;
+					}
+				}
+			}
+		}
+	}
+
+	//Average player position
+	if (nrPlayers > 0)
+		cameraVector /= static_cast<float>(nrPlayers);
+
+	//Lerp towards the desired position
+	const float t{ m_SceneContext.pGameTime->GetElapsed() * 1.1f };
+	cameraVector = XMVectorLerp(XMLoadFloat3(&m_LastCameraPosition), cameraVector, t);
+
+	XMStoreFloat3(&cameraPosition, cameraVector);
+	m_LastCameraPosition = cameraPosition;
+
+	//Fov interpolation
+	const float fov{ XM_PIDIV4 - (1.f - (largestDistance / 80.0f)) * XM_PIDIV4 * 0.1f };
+	m_LastFov = std::lerp(m_LastFov, fov, t);
+
+	m_pCameraComp->SetFieldOfView(m_LastFov);
+
+	//Add basic offset
+	cameraVector += XMLoadFloat3(&m_DefaultCameraOffset);
+
+	m_pFixedCamera->GetTransform()->Translate(cameraVector);
 }
 
 void BombermanScene::InitArena()
@@ -399,7 +561,7 @@ void BombermanScene::InitArena()
 		{
 			if(!std::any_of(reserved.begin(), reserved.end(), [&](const std::pair<int, int>& pair) { return pair.first == col && pair.second == row; }))
 			{ 
-				//CreateCube(true, col, row, 1, meshFilePath, pRockMaterial, pStaticMaterial);
+				CreateCube(true, col, row, 1, meshFilePath, pRockMaterial, pStaticMaterial);
 			}
 		}
 	}
@@ -521,26 +683,30 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 
 	//UI
 	{
-		const auto pSprite = AddChild(new GameObject);
-
 		float offsetX{ 20.f };
 		float spritePivotX{}, spriteOffsetX{ offsetX }, spriteOffsetY{ 100 };
+		bool flip{ false };
 
 		if (m_NrPlayers % 2 == 0)
 		{
 			spritePivotX = 1.f;
 			spriteOffsetX = m_SceneContext.windowWidth - offsetX;
+			flip = true;
 		}
 
 		if (m_NrPlayers > 2)
 		{
-			spriteOffsetY += 200;
+			spriteOffsetY += 500;
 		}
 
-		pSprite->AddComponent(new SpriteComponent(playerDesc.spriteName, { spritePivotX, 0.f }, { 1.f,1.f,1.f,1.f }));
+		const auto pIcon{ AddChild(new PlayerGameIcon(playerDesc.spriteName, m_pFont, spritePivotX, flip, playerDesc.displayedText)) };
 
-		pSprite->GetTransform()->Translate( spriteOffsetX, spriteOffsetY, 0.f);
-		pSprite->GetTransform()->Scale(0.5f);
+		pIcon->GetTransform()->Translate( spriteOffsetX, spriteOffsetY, 0.f);
+		pIcon->GetTransform()->Scale(0.5f);
+
+		pIcon->InitPosition();
+
+		m_pCharacters[index]->SetIcon(pIcon);
 	}
 }
 

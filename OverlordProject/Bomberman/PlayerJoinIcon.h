@@ -1,8 +1,4 @@
 #pragma once
-enum class PickUpType { NotBlockable, DoubleRange, PlaceTwoBombs, Highest = PlaceTwoBombs, None };
-
-class Grid;
-class Node;
 
 class PlayerJoinIcon final : public GameObject
 {
@@ -17,7 +13,7 @@ public:
 
 	virtual void Initialize(const SceneContext&) override;
 	virtual void Update(const SceneContext& sceneContext) override;
-
+	virtual void Draw(const SceneContext&) override;
 	void InitPosition();
 
 	bool IsFree() const { return m_PlayerIndex == -1; }

@@ -24,6 +24,7 @@ private:
 	Grid* m_pGrid;
 	Node* m_pNode;
 	PickUpType m_Type;
+	bool m_IsActive{ true };
 
 	static std::unordered_map<PickUpType, BaseMaterial*> s_pPickUpMaterials;
 	static PxMaterial* s_pStaticMaterial;
