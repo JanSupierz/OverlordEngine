@@ -20,6 +20,8 @@ public:
 	static void SetPhysicsMaterial(PxMaterial* pStaticMaterial);
 	static void SetPickUpMaterial(PickUpType type, BaseMaterial* pMaterial);
 	PickUpType GetType() const;
+
+	static bool CheckPickUp();
 private:
 	Grid* m_pGrid;
 	Node* m_pNode;
@@ -28,4 +30,6 @@ private:
 
 	static std::unordered_map<PickUpType, BaseMaterial*> s_pPickUpMaterials;
 	static PxMaterial* s_pStaticMaterial;
+
+	static bool s_PickedUp;
 };

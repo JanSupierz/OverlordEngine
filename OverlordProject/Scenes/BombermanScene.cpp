@@ -109,7 +109,7 @@ void BombermanScene::Initialize()
 	FMOD::Sound* pSound2D{ nullptr };
 	pFmod->createStream("Resources/Sounds/Arena.mp3", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &pSound2D);
 	pFmod->playSound(pSound2D, nullptr, true, &m_pChannel2D);
-	m_pChannel2D->setVolume(0.001f);
+	m_pChannel2D->setVolume(0.1f);
 
 	m_TimerTextPosition.x = m_SceneContext.windowWidth / 2.f;
 	m_TimerTextPosition.y = 5.f;
@@ -125,6 +125,10 @@ void BombermanScene::Initialize()
 	m_TimerTextPosition.y = 20.f;
 
 	pFmod->createStream("Resources/Sounds/bomb_explosion.ogg", FMOD_3D | FMOD_LOOP_OFF | FMOD_3D_LINEARROLLOFF, nullptr, &m_pBombSound3D);
+	pFmod->createStream("Resources/Sounds/pickUp.mp3", FMOD_3D | FMOD_LOOP_OFF | FMOD_3D_LINEARROLLOFF, nullptr, &m_pPickUpSound);
+
+	pFmod->createStream("Resources/Sounds/AUD_Clock.wav", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &m_pClockSound);
+
 	m_pChannel3D->set3DMinMaxDistance(0.f, 1000.f);
 
 	//End Text
@@ -174,6 +178,11 @@ void BombermanScene::Update()
 		m_pChromatic->SetIsEnabled(true);
 	}
 
+	if (PickUp::CheckPickUp())
+	{
+		SoundManager::Get()->GetSystem()->playSound(m_pPickUpSound, nullptr, false, &m_pChannel3D);
+	}
+
 	for (Character* pCharacter : m_pCharacters)
 	{
 		if (pCharacter)
@@ -212,6 +221,14 @@ void BombermanScene::Update()
 			std::ostringstream timerTextStream;
 			timerTextStream << std::setw(2) << std::setfill('0') << m_NrMinutes << ":" << std::setw(2) << std::setfill('0') << m_NrSeconds;
 			m_TimerText = timerTextStream.str();
+		}
+
+		if (m_TimeLeft <= 10.f && !m_ClockSoundActivated)
+		{
+			SoundManager::Get()->GetSystem()->playSound(m_pClockSound, nullptr, false, &m_pChannel2DClock);
+			m_ClockSoundActivated = true;
+
+			m_TimerTextColor = { 1.f,0.f,0.f,1.f };
 		}
 	}
 	else if (!m_GameEnded)
@@ -263,6 +280,7 @@ void BombermanScene::Update()
 			m_EndTextPosition.x -= 100.f;
 		}
 
+		m_pChannel2DClock->stop();
 		m_GameEnded = true;
 	}
 
@@ -289,7 +307,7 @@ void BombermanScene::Update()
 
 void BombermanScene::Draw()
 {
-	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_TimerText), m_TimerTextPosition, m_TextColor);
+	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_TimerText), m_TimerTextPosition, m_TimerTextColor);
 
 	if (m_GameEnded)
 	{
@@ -305,12 +323,14 @@ void BombermanScene::OnSceneActivated()
 {
 	m_pChannel2D->setPaused(false);
 	m_pChannel3D->setPaused(false);
+	m_pChannel2DClock->setPaused(false);
 }
 
 void BombermanScene::OnSceneDeactivated()
 {
 	m_pChannel2D->setPaused(true);
 	m_pChannel3D->setPaused(true);
+	m_pChannel2DClock->setPaused(true);
 }
 
 void BombermanScene::CreateCube(bool isDestructible, int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset, float scale, bool disableRigidBody)

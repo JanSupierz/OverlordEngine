@@ -6,6 +6,7 @@
 
 std::unordered_map<PickUpType, BaseMaterial*> PickUp::s_pPickUpMaterials{};
 PxMaterial* PickUp::s_pStaticMaterial{ nullptr };
+bool PickUp::s_PickedUp{ false };
 
 PickUp::PickUp(Node* pNode, Grid* pGrid, PickUpType type)
 	:m_Type{ type }, m_pGrid{ pGrid }, m_pNode{ pNode }
@@ -73,6 +74,8 @@ void PickUp::Initialize(const SceneContext&)
 
 				BombermanScene::RemoveGameObject(this);
 				m_IsActive = false;
+
+				s_PickedUp = true;
 			}
 		}
 	};
@@ -93,4 +96,12 @@ void PickUp::SetPickUpMaterial(PickUpType type, BaseMaterial* pMaterial)
 PickUpType PickUp::GetType() const
 {
 	return m_Type;
+}
+
+bool PickUp::CheckPickUp()
+{
+	bool temp{ s_PickedUp };
+	s_PickedUp = false;
+
+	return temp;
 }

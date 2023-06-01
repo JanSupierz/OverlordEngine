@@ -37,8 +37,12 @@ private:
 	SpriteFont* m_pFont{};
 	XMFLOAT4 m_TextColor{ 0.f,0.f,0.f,1.f };
 
-	FMOD::Channel* m_pChannel2D{ nullptr };
-	FMOD::Channel* m_pChannel3D{ nullptr };
+	FMOD::Sound* m_pMusicSound{};
+	FMOD::Sound* m_pSelectSound{};
+	FMOD::Sound* m_pClickSound{};
+
+	FMOD::Channel* m_pChannelBackground2D{ nullptr };
+	FMOD::Channel* m_pChannelEffects2D{ nullptr };
 
 	std::vector<SpriteComponent*> m_pSprites{};
 	std::vector<std::string> m_ButtonTexts{};

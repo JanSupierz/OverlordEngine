@@ -42,8 +42,13 @@ private:
 	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
 	int m_NrPlayers{};
 
-	FMOD::Channel* m_pChannel2D{ nullptr };
-	FMOD::Channel* m_pChannel3D{ nullptr };
+	FMOD::Sound* m_pMusicSound{};
+	FMOD::Sound* m_pSelectSound{};
+	FMOD::Sound* m_pClickSound{};
+	FMOD::Sound* m_pJoinSound{};
+
+	FMOD::Channel* m_pChannelBackground2D{ nullptr };
+	FMOD::Channel* m_pChannelEffects2D{ nullptr };
 };
 
 

@@ -87,10 +87,9 @@ void MainMenuScene::Initialize()
 	//Sound 2D
 	const auto pFmod = SoundManager::Get()->GetSystem();
 
-	FMOD::Sound* pSound2D{ nullptr };
-	pFmod->createStream("Resources/Sounds/Menu.mp3", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &pSound2D);
-	pFmod->playSound(pSound2D, nullptr, true, &m_pChannel2D);
-	m_pChannel2D->setVolume(0.2f);
+	pFmod->createStream("Resources/Sounds/Menu.mp3", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &m_pMusicSound);
+	pFmod->createStream("Resources/Sounds/AUD_Click.wav", FMOD_2D | FMOD_LOOP_OFF, nullptr, &m_pClickSound);
+	pFmod->createStream("Resources/Sounds/AUD_Select.wav", FMOD_2D | FMOD_LOOP_OFF, nullptr, &m_pSelectSound);
 }
 
 void MainMenuScene::Update()
@@ -105,6 +104,8 @@ void MainMenuScene::Update()
 		{
 			SceneManager::Get()->Quit();
 		}
+
+		SoundManager::Get()->GetSystem()->playSound(m_pClickSound, nullptr, false, &m_pChannelEffects2D);
 	}
 	else if (m_SceneContext.pInput->IsActionTriggered(Next) || m_SceneContext.pInput->IsActionTriggered(Previous))
 	{
@@ -120,6 +121,8 @@ void MainMenuScene::Update()
 			m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
 			m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
 		}
+
+		SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
 	}
 }
 
@@ -131,10 +134,11 @@ void MainMenuScene::Draw()
 
 void MainMenuScene::OnSceneActivated()
 {
-	m_pChannel2D->setPaused(false);
+	SoundManager::Get()->GetSystem()->playSound(m_pMusicSound, nullptr, false, &m_pChannelBackground2D);
+	m_pChannelBackground2D->setVolume(0.2f);
 }
 
 void MainMenuScene::OnSceneDeactivated()
 {
-	m_pChannel2D->setPaused(true);
+	m_pChannelBackground2D->stop();
 }
