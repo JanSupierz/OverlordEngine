@@ -87,6 +87,7 @@ private:
 		CharacterMoveForward,
 		CharacterMoveBackward,
 		CharacterPlaceBomb,
+		Pause = 30
 	};
 
 	const float m_CubeSize;
@@ -111,7 +112,7 @@ private:
 	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
 	std::string m_TimerText{ "2:00" };
 	XMFLOAT2 m_TimerTextPosition{};
-	float m_TimeLeft{ 0.5f };
+	float m_TimeLeft{ 90.f };
 	int m_NrMinutes{ 3 };
 	int m_NrSeconds{ 0 };
 	bool m_GameEnded{false};

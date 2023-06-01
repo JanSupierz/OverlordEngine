@@ -33,6 +33,8 @@ BombermanScene::BombermanScene() :
 	GameScene(L"BombermanScene"), m_CubeSize{ 10.f }, m_pChromatic{ nullptr }, 
 	m_pGrid{ std::move(std::make_unique<Grid>(15, 15, m_CubeSize)) }, m_DefaultCameraOffset{ 0, m_MaxCameraHeight, -65.f }
 {
+	assert(s_CurrentScene == nullptr);
+
 	s_CurrentScene = this;
 
 	//Init random values
@@ -57,6 +59,8 @@ BombermanScene::~BombermanScene()
 	{
 		delete pObject;
 	}
+
+	s_CurrentScene = nullptr;
 }
 
 void BombermanScene::AddGameObject(GameObject* pGameObject)
@@ -126,6 +130,9 @@ void BombermanScene::Initialize()
 	//End Text
 	m_EndTextPosition.x = m_SceneContext.windowWidth / 2.f;
 	m_EndTextPosition.y = m_SceneContext.windowHeight / 2.f;
+
+	auto inputAction = InputAction(Pause, InputState::down, -1, -1, XINPUT_GAMEPAD_START);
+	m_SceneContext.pInput->AddInputAction(inputAction);
 }
 
 inline FMOD_VECTOR ToFmod(XMFLOAT3 v) //DirectX
@@ -273,6 +280,11 @@ void BombermanScene::Update()
 	m_PrevCamPos = pos;
 
 	SoundManager::Get()->GetSystem()->set3DListenerAttributes(0, &pos, &vel, &forward, &up);
+
+	if (m_SceneContext.pInput->IsActionTriggered(Pause))
+	{
+		SceneManager::Get()->SetActiveGameScene(L"PauseScene");
+	}
 }
 
 void BombermanScene::Draw()

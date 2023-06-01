@@ -61,7 +61,9 @@
 
 #ifdef Bomberman
 #include "Scenes/MainMenuScene.h"
+#include "Scenes/JoinMenuScene.h"
 #include "Scenes/BombermanScene.h"
+#include "Scenes/PauseScene.h"
 #endif
 
 #ifdef MILESTONE_1
@@ -143,7 +145,9 @@ void MainGame::Initialize()
 
 #ifdef Bomberman
 	SceneManager::Get()->AddGameScene(new MainMenuScene());
+	SceneManager::Get()->AddGameScene(new JoinMenuScene());
 	SceneManager::Get()->AddGameScene(new BombermanScene());
+	SceneManager::Get()->AddGameScene(new PauseScene());
 #endif
 
 #ifdef MILESTONE_1

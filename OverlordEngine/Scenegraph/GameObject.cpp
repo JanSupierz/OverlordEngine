@@ -8,6 +8,7 @@ GameObject::GameObject():
 {
 	AddComponent(m_pTransform);
 }
+
 GameObject::~GameObject()
 {
 	for(BaseComponent* pComp: m_pComponents)

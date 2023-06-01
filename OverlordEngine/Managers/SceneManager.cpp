@@ -3,6 +3,11 @@
 #include <algorithm>
 
 
+bool SceneManager::IsRunning() const
+{
+	return m_IsRunning;
+}
+
 void SceneManager::Initialize()
 {
 	for (GameScene* pScene : m_pScenes)

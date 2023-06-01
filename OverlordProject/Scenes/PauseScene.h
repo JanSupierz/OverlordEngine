@@ -1,21 +1,21 @@
 #pragma once
 
-class MainMenuScene final : public GameScene
+class PauseScene final : public GameScene
 {
 public:
-	MainMenuScene();
-	~MainMenuScene() override;
+	PauseScene();
+	~PauseScene() override;
 
-	MainMenuScene(const MainMenuScene& other) = delete;
-	MainMenuScene(MainMenuScene&& other) noexcept = delete;
-	MainMenuScene& operator=(const MainMenuScene& other) = delete;
-	MainMenuScene& operator=(MainMenuScene&& other) noexcept = delete;
+	PauseScene(const PauseScene& other) = delete;
+	PauseScene(PauseScene&& other) noexcept = delete;
+	PauseScene& operator=(const PauseScene& other) = delete;
+	PauseScene& operator=(PauseScene&& other) noexcept = delete;
 
 protected:
 	void Initialize() override;
 	void Update() override;
 	void Draw() override;
-	
+
 	virtual void OnSceneActivated() override;
 	virtual void OnSceneDeactivated() override;
 
@@ -27,10 +27,10 @@ private:
 
 	enum class Button
 	{
-		start, quit
+		resume, quit, restart
 	};
 
-	Button m_CurrentButton{ Button::start };
+	Button m_CurrentButton{ Button::resume };
 
 	FixedCamera* m_pFixedCamera{};
 
