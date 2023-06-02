@@ -1,5 +1,5 @@
 #pragma once
-enum class PickUpType { NotBlockable, DoubleRange, PlaceTwoBombs, Highest = PlaceTwoBombs, None };
+enum class PickUpType { Flames, Shield, FireUp, Highest = FireUp, None };
 
 class Grid;
 class Node;

@@ -55,11 +55,6 @@ BombermanScene::~BombermanScene()
 		delete pObject;
 	}
 
-	for (GameObject* pObject : s_pObjectsToRemove)
-	{
-		delete pObject;
-	}
-
 	s_CurrentScene = nullptr;
 }
 
@@ -129,11 +124,11 @@ void BombermanScene::Initialize()
 
 	pFmod->createStream("Resources/Sounds/AUD_Clock.wav", FMOD_2D | FMOD_LOOP_NORMAL, nullptr, &m_pClockSound);
 
-	m_pChannel3D->set3DMinMaxDistance(0.f, 1000.f);
+	m_pChannel3D->set3DMinMaxDistance(0.f, 800.f);
 
 	//End Text
 	m_EndTextPosition.x = m_SceneContext.windowWidth / 2.f;
-	m_EndTextPosition.y = m_SceneContext.windowHeight / 2.f;
+	m_EndTextPosition.y = m_SceneContext.windowHeight / 2.f - 15.f;
 
 	auto inputAction = InputAction(Pause, InputState::down, -1, -1, XINPUT_GAMEPAD_START);
 	m_SceneContext.pInput->AddInputAction(inputAction);
@@ -172,8 +167,9 @@ void BombermanScene::Update()
 	if (Bomb::CheckExplosion())
 	{
 		m_ScreenShakeTimer = m_MaxScreenShakeDuration;
-	
+		
 		SoundManager::Get()->GetSystem()->playSound(m_pBombSound3D, nullptr, false, &m_pChannel3D);
+		m_pChannel3D->setVolume(1.f);
 
 		m_pChromatic->SetIsEnabled(true);
 	}
@@ -181,13 +177,20 @@ void BombermanScene::Update()
 	if (PickUp::CheckPickUp())
 	{
 		SoundManager::Get()->GetSystem()->playSound(m_pPickUpSound, nullptr, false, &m_pChannel3D);
+		m_pChannel3D->setVolume(1.f);
 	}
 
+	int nrAlive{ 0 };
 	for (Character* pCharacter : m_pCharacters)
 	{
 		if (pCharacter)
 		{
-			pCharacter->UpdateScore();
+			pCharacter->UpdateIcon();
+			
+			if (pCharacter->GetIsActive())
+			{
+				++nrAlive;
+			}
 		}
 	}
 
@@ -205,7 +208,7 @@ void BombermanScene::Update()
 	UpdateCamera();
 
 	//Update game timer
-	if (m_TimeLeft > 0.f)
+	if (m_TimeLeft > 0.f && nrAlive > m_MinNrAlive)
 	{
 		m_TimeLeft -= m_SceneContext.pGameTime->GetElapsed();
 
@@ -235,36 +238,48 @@ void BombermanScene::Update()
 	{
 		int highestScore{ -1 };
 		Character* pWinner{};
-
+		bool draw{ false };
+		
 		for (Character* pCharacter : m_pCharacters)
 		{
-			if (pCharacter)
+			if (pCharacter && pCharacter->GetIsActive())
 			{
-				int score{ pCharacter->GetScore() };
-
-				//Is active
-				if (pCharacter->GetIsActive())
+				const int score{ pCharacter->GetScore() };
+				
+				if (score > highestScore)
 				{
+					highestScore = score;
+					draw = false;
+
+					pWinner = pCharacter;
+				}
+				else if (score == highestScore)
+				{
+					draw = true;
+				}
+			}
+		}
+
+		if (!pWinner)
+		{
+			for (Character* pCharacter : m_pCharacters)
+			{
+				if (pCharacter)
+				{
+					const int score{ pCharacter->GetScore() };
+
 					if (score > highestScore)
 					{
 						highestScore = score;
-						pWinner = pCharacter;
-					}
-					//Last winner is not alive or there is no other winner
-					else if (!pWinner || (pWinner && !pWinner->GetIsActive()))
-					{
-						highestScore = score;
-						pWinner = pCharacter;
-					}
-				}
-				//Last winner is not alive or there is no other winner
-				else if(!pWinner || (pWinner && !pWinner->GetIsActive()))
-				{
-					highestScore = score;
-					pWinner = pCharacter;
-				}
+						draw = false;
 
-				pCharacter->SetIsActive(false);
+						pWinner = pCharacter;
+					}
+					else if (score == highestScore)
+					{
+						draw = true;
+					}
+				}
 			}
 		}
 
@@ -276,12 +291,38 @@ void BombermanScene::Update()
 			pBackGroundImage->GetTransform()->Translate(m_SceneContext.windowWidth / 2.f, m_SceneContext.windowHeight / 2.f, 0.01f);
 			pBackGroundImage->GetTransform()->Scale(3.f, 0.4f, 1.f);
 
-			m_EndText = "Player " + std::to_string(pWinner->GetIndex()) + " Wins!";
-			m_EndTextPosition.x -= 100.f;
+			for (Character* pCharacter : m_pCharacters)
+			{
+				if (pCharacter)
+				{
+					pCharacter->SetIsActive(false);
+				}
+			}
+
+
+			if (!draw)
+			{
+				m_EndText = "Player " + pWinner->GetIcon()->GetName() + " Wins!";
+				m_EndTextPosition.x -= 100.f;
+			}
+			else
+			{
+				m_EndText = "Draw!";
+				m_EndTextPosition.x -= 40.f;
+			}
 		}
 
 		m_pChannel2DClock->stop();
 		m_GameEnded = true;
+	}
+	else if (m_GameEnded)
+	{
+		m_WaitTime -= m_SceneContext.pGameTime->GetElapsed();
+
+		if (m_WaitTime <= 0.f)
+		{
+			SceneManager::Get()->SetActiveGameScene(L"EndScene");
+		}
 	}
 
 	//3D Sound Attributes
@@ -299,7 +340,7 @@ void BombermanScene::Update()
 
 	SoundManager::Get()->GetSystem()->set3DListenerAttributes(0, &pos, &vel, &forward, &up);
 
-	if (m_SceneContext.pInput->IsActionTriggered(Pause))
+	if (!m_GameEnded && m_SceneContext.pInput->IsActionTriggered(Pause))
 	{
 		SceneManager::Get()->SetActiveGameScene(L"PauseScene");
 	}
@@ -424,6 +465,7 @@ void BombermanScene::UpdateCamera()
 	//Average player position
 	if (nrPlayers > 0)
 		cameraVector /= static_cast<float>(nrPlayers);
+		cameraVector /= 2;
 
 	//Lerp towards the desired position
 	const float t{ m_SceneContext.pGameTime->GetElapsed() * 1.1f };
@@ -461,7 +503,7 @@ void BombermanScene::InitArena()
 	//Set Fire materials
 	{
 		const auto pFireMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>() };
-		pFireMaterial->SetDiffuseTexture(L"Textures/Bomberman/Bomb.png");
+		pFireMaterial->SetDiffuseTexture(L"Textures/FireCube.png");
 
 		Fire::SetFireMaterials(pFireMaterial, pStaticMaterial);
 	}
@@ -473,14 +515,25 @@ void BombermanScene::InitArena()
 		const auto pFrameMaterial{ MaterialManager::Get()->CreateMaterial<ColorMaterial_Shadow_Skinned>() };
 		pFrameMaterial->SetColor(DirectX::Colors::DarkGray);
 
+		//Faster movement
 		PickUp::SetPickUpMaterial(PickUpType::None, pFrameMaterial);
 
 		auto pPickUpMaterial{ MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
-		pPickUpMaterial->SetDiffuseTexture(L"Textures/Bomberman/PickUp/Bomb.png");
+		pPickUpMaterial->SetDiffuseTexture(L"Textures/Bomberman/PickUp/bomb.png");
 
-		PickUp::SetPickUpMaterial(PickUpType::PlaceTwoBombs, pPickUpMaterial);
-		PickUp::SetPickUpMaterial(PickUpType::DoubleRange, pPickUpMaterial);
-		PickUp::SetPickUpMaterial(PickUpType::NotBlockable, pPickUpMaterial);
+		PickUp::SetPickUpMaterial(PickUpType::FireUp, pPickUpMaterial);
+
+		//Flames are not blocked
+		pPickUpMaterial = { MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
+		pPickUpMaterial->SetDiffuseTexture(L"Textures/Bomberman/PickUp/flamme.png");
+
+		PickUp::SetPickUpMaterial(PickUpType::Flames, pPickUpMaterial);
+
+		//Flame protection
+		pPickUpMaterial = { MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow_Skinned>() };
+		pPickUpMaterial->SetDiffuseTexture(L"Textures/Bomberman/PickUp/flampass.png");
+		
+		PickUp::SetPickUpMaterial(PickUpType::Shield, pPickUpMaterial);
 	}
 
 	//Create ground
@@ -496,31 +549,31 @@ void BombermanScene::InitArena()
 	GameSceneExt::CreatePhysXGroundPlane(*this, pBouncyMaterial);
 
 	auto pColorMaterial = MaterialManager::Get()->CreateMaterial<DiffuseMaterial_Shadow>();
-	pColorMaterial->SetDiffuseTexture(L"Textures/Bomberman/SideCube_Diffuse.png");
+	pColorMaterial->SetDiffuseTexture(L"Textures/Bomberman/Wall.png");
 
 	//Side Cubes
-	std::wstring meshFilePath{ L"Meshes/Bomberman/SideCubes.ovm" };
+	std::wstring meshFilePath{ L"Meshes/Bomberman/Cube.ovm" };
 
 	const int nrCols{ m_pGrid->GetNrCols() };
 	for (int col{}; col < nrCols; ++col)
 	{
-		CreateCube(false, col, 0, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, col, 0, 1, meshFilePath, pColorMaterial, pStaticMaterial, 0.5f * m_CubeSize);
 	}
 
 	const int nrRows{ m_pGrid->GetNrRows() };
 	for (int col{}; col < nrCols; ++col)
 	{
-		CreateCube(false, col, nrRows - 1, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, col, nrRows - 1, 1, meshFilePath, pColorMaterial, pStaticMaterial, 0.5f * m_CubeSize);
 	}
-
+	
 	for (int row{ 1 }; row < nrRows - 1; ++row)
 	{
-		CreateCube(false, 0, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, 0, row, 1, meshFilePath, pColorMaterial, pStaticMaterial, 0.5f * m_CubeSize);
 	}
-
+	
 	for (int row{ 1 }; row < nrRows - 1; ++row)
 	{
-		CreateCube(false, nrCols - 1, row, 1, meshFilePath, pColorMaterial, pStaticMaterial);
+		CreateCube(false, nrCols - 1, row, 1, meshFilePath, pColorMaterial, pStaticMaterial, 0.5f * m_CubeSize);
 	}
 
 	//Ground Cubes
@@ -587,6 +640,12 @@ void BombermanScene::InitArena()
 	reserved.emplace_back(nrRows - 3, 1);
 	reserved.emplace_back(nrRows - 2, 2);
 
+	for (int i{}; i < nrCols; ++i)
+	{
+		reserved.emplace_back(nrRows / 2, i);
+		reserved.emplace_back(i, nrCols / 2);
+	}
+
 	for (int row{ 1 }; row < nrRows - 1; ++row)
 	{
 		for (int col{ 1 }; col < nrCols - 1; ++col)
@@ -602,6 +661,11 @@ void BombermanScene::InitArena()
 void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 {
 	++m_NrPlayers;
+
+	if (m_NrPlayers > 1)
+	{
+		m_MinNrAlive = 1;
+	}
 
 	constexpr float animationMeshSize{ 100.f };
 	constexpr float animationMeshScale{ 0.1f };
@@ -647,6 +711,7 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 		characterDesc.actionId_MoveLeft = ToInputId(index, CharacterMoveLeft);
 		characterDesc.actionId_MoveRight = ToInputId(index, CharacterMoveRight);
 		characterDesc.actionId_PlaceBomb = ToInputId(index, CharacterPlaceBomb);
+		characterDesc.actionId_Detonate = ToInputId(index, CharacterDetonate);
 		characterDesc.gamepadIndex = gamepadIndex;
 		characterDesc.controller.height = playerHeight;
 		characterDesc.controller.radius = playerHeight / 3.f;
@@ -710,6 +775,9 @@ void BombermanScene::InitPlayer(const PlayerDesc& playerDesc)
 		m_SceneContext.pInput->AddInputAction(inputAction);
 
 		inputAction = InputAction(ToInputId(index, CharacterPlaceBomb), InputState::pressed, -1, -1, XINPUT_GAMEPAD_A, gamepadIndex);
+		m_SceneContext.pInput->AddInputAction(inputAction);
+
+		inputAction = InputAction(ToInputId(index, CharacterDetonate), InputState::pressed, -1, -1, XINPUT_GAMEPAD_B, gamepadIndex);
 		m_SceneContext.pInput->AddInputAction(inputAction);
 	}
 

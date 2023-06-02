@@ -26,6 +26,7 @@ public:
 	UINT GetClipCount() const { return UINT(m_pMeshFilter->m_AnimationClips.size()); }
 	const std::wstring& GetClipName() const { ASSERT_IF_(!m_ClipSet) return m_CurrentClip.name; }
 	const std::vector<XMFLOAT4X4>& GetBoneTransforms() const { return m_Transforms; }
+	void SetDoOnce(bool doOnce) { m_DoOnce = doOnce; }
 
 private:
 	AnimationClip m_CurrentClip{};
@@ -33,5 +34,6 @@ private:
 	std::vector<XMFLOAT4X4> m_Transforms{};
 	bool m_IsPlaying{}, m_Reversed{}, m_ClipSet{};
 	float m_TickCount{}, m_AnimationSpeed{1.f};
+	bool m_DoOnce{};
 };
 

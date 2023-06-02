@@ -16,7 +16,7 @@ PlayerGameIcon::PlayerGameIcon(const std::wstring& spritePath, SpriteFont* pFont
 
 		const float textOffset{ -46.f };
 		m_TextPosition.x = textOffset;
-
+		m_PowerUpTextPosition.x -= 190.f;
 	}
 	else
 	{
@@ -24,6 +24,7 @@ PlayerGameIcon::PlayerGameIcon(const std::wstring& spritePath, SpriteFont* pFont
 
 		const float textOffset{ 15.f };
 		m_TextPosition.x = textOffset;
+		m_PowerUpTextPosition.x += 90.f;
 	}
 
 	pSprite->GetTransform()->Translate(0.f, 120.f, 0.02f);
@@ -45,6 +46,7 @@ void PlayerGameIcon::Update(const SceneContext&)
 void PlayerGameIcon::Draw(const SceneContext&)
 {
 	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_Text), m_TextPosition, m_TextColor);
+	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_PowerUpText), m_PowerUpTextPosition, m_PowerUpTextColor);
 }
 
 void PlayerGameIcon::InitPosition()
@@ -53,6 +55,9 @@ void PlayerGameIcon::InitPosition()
 
 	m_TextPosition.x += position.x;
 	m_TextPosition.y += position.y;
+
+	m_PowerUpTextPosition.x += position.x;
+	m_PowerUpTextPosition.y += position.y;
 }
 
 void PlayerGameIcon::AddStar()
@@ -74,6 +79,11 @@ void PlayerGameIcon::AddStar()
 	}
 
 	pSprite->GetTransform()->Scale(0.2f);
+}
+
+std::string PlayerGameIcon::GetName() const
+{
+	return m_Text.substr(1);
 }
 
 

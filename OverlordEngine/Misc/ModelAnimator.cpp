@@ -32,8 +32,16 @@ void ModelAnimator::Update(const SceneContext& sceneContext)
 			//If m_TickCount is smaller than zero
 			if (m_TickCount < 0)
 			{
-				//Add m_CurrentClip.Duration to m_TickCount
-				m_TickCount += m_CurrentClip.duration;
+				if (!m_DoOnce)
+				{
+					//Add m_CurrentClip.Duration to m_TickCount
+					m_TickCount += m_CurrentClip.duration;
+				}
+				else
+				{
+					m_IsPlaying = false;
+					m_TickCount = 0.f;
+				}
 			}
 		}
 		else
@@ -44,8 +52,17 @@ void ModelAnimator::Update(const SceneContext& sceneContext)
 			//If m_TickCount is bigger than the clip duration
 			if (m_TickCount > m_CurrentClip.duration)
 			{
-				//Subtract the duration from m_TickCount
-				m_TickCount -= m_CurrentClip.duration;
+				if (!m_DoOnce)
+				{
+					//Subtract the duration from m_TickCount
+					m_TickCount -= m_CurrentClip.duration;
+				}
+				else
+				{
+					//Play until the last frame
+					m_IsPlaying = false;
+					m_TickCount = m_CurrentClip.duration;
+				}
 			}
 		}
 
@@ -63,6 +80,14 @@ void ModelAnimator::Update(const SceneContext& sceneContext)
 
 			//keyB > Closest Key with Tick after/bigger than m_TickCount
 			keyB = *pKeyB;
+		}
+		else
+		{
+			//keyA > Closest Key with Tick before/smaller than m_TickCount
+			keyA = *(pKeyB - 2);
+
+			//keyB > Closest Key with Tick after/bigger than m_TickCount
+			keyB = *(pKeyB - 1);
 		}
 
 		//4.

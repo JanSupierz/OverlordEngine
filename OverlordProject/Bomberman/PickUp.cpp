@@ -70,7 +70,7 @@ void PickUp::Initialize(const SceneContext&)
 			{
 				//Other player gains a point
 				Character* pCharacter = static_cast<Character*>(pOther);
-				pCharacter->AddScore();
+				pCharacter->AddPowerUp(m_Type);
 
 				BombermanScene::RemoveGameObject(this);
 				m_IsActive = false;

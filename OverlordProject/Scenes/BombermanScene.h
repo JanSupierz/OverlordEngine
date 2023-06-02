@@ -70,7 +70,7 @@ private:
 	CameraComponent* m_pCameraComp{};
 
 	const float m_MaxCameraHeight{ 150.f };
-
+	int m_MinNrAlive{ 0 };
 	int m_AnimationClipId{ 0 };
 	float m_AnimationSpeed{ 1.f };
 	int m_NrPlayers{};
@@ -78,7 +78,7 @@ private:
 	char** m_ClipNames{};
 	UINT m_ClipCount{};
 
-	const int m_NrPlayerInputs{5};
+	const int m_NrPlayerInputs{ 6 };
 
 	enum InputIds
 	{
@@ -87,7 +87,8 @@ private:
 		CharacterMoveForward,
 		CharacterMoveBackward,
 		CharacterPlaceBomb,
-		Pause = 30
+		CharacterDetonate,
+		Pause = 50
 	};
 
 	const float m_CubeSize;
@@ -116,12 +117,14 @@ private:
 	SpriteFont* m_pFont{};
 	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
 	XMFLOAT4 m_TimerTextColor{ 1.f,1.f,1.f,1.f };
-	std::string m_TimerText{ "2:00" };
+	std::string m_TimerText{};
 	XMFLOAT2 m_TimerTextPosition{};
-	float m_TimeLeft{ 15.f };
-	int m_NrMinutes{ 3 };
-	int m_NrSeconds{ 0 };
+	float m_TimeLeft{ 180.f };
+	int m_NrMinutes{};
+	int m_NrSeconds{};
 	bool m_GameEnded{false};
+
+	float m_WaitTime{ 5.f };
 
 	//Statics
 	static std::vector<GameObject*> s_pObjectsToAdd;

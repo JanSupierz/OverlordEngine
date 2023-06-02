@@ -8,7 +8,7 @@ class BaseMaterial;
 class Bomb final: public GameObject
 {
 public:
-	Bomb(int col, int row, Character* pOwner, Grid* pGrid);
+	Bomb(int col, int row, Character* pOwner, Grid* pGrid, bool flamesPowerUp, bool fireUp);
 	virtual ~Bomb();
 
 	Bomb(const Bomb& other) = delete;
@@ -45,6 +45,8 @@ private:
 	bool m_ShouldRemoveCollision{ false };
 	bool m_ShouldAddCollision{ false };
 	RigidBodyComponent* m_pRigid{};
+
+	bool m_FlamesPowerUp;
 
 	static BaseMaterial* s_pBombMaterial;
 	static PxMaterial* s_pStaticMaterial;

@@ -1,16 +1,17 @@
 #include "stdafx.h"
-#include "MainMenuScene.h"
+#include "EndScene.h"
+#include "BombermanScene.h"
 
-MainMenuScene::MainMenuScene()
-	:GameScene(L"MainMenuScene")
+EndScene::EndScene()
+	:GameScene(L"EndScene")
 {
 }
 
-MainMenuScene::~MainMenuScene()
+EndScene::~EndScene()
 {
 }
 
-void MainMenuScene::Initialize()
+void EndScene::Initialize()
 {
 	m_SceneContext.settings.drawGrid = false;
 	m_SceneContext.settings.drawPhysXDebug = false;
@@ -52,8 +53,8 @@ void MainMenuScene::Initialize()
 	pButtonStart->GetTransform()->Scale(0.5f);
 
 	m_pSprites.emplace_back(pSprite);
-	m_ButtonTexts.emplace_back("Start Game");
-	m_ButtonTextPositions.emplace_back(XMFLOAT2{380.f,505.f});
+	m_ButtonTexts.emplace_back("Play Again");
+	m_ButtonTextPositions.emplace_back(XMFLOAT2{ 380.f,505.f });
 
 	//Button Quit
 	auto pButtonQuit{ AddChild(new GameObject()) };
@@ -83,12 +84,13 @@ void MainMenuScene::Initialize()
 	pFmod->createStream("Resources/Sounds/AUD_Select.wav", FMOD_2D | FMOD_LOOP_OFF, nullptr, &m_pSelectSound);
 }
 
-void MainMenuScene::Update()
+void EndScene::Update()
 {
 	if (m_SceneContext.pInput->IsActionTriggered(Start))
 	{
 		if (m_CurrentButton == Button::start)
 		{
+			SceneManager::Get()->RemoveGameScene(BombermanScene::GetCurrent(), true);
 			SceneManager::Get()->SetActiveGameScene(L"JoinMenuScene");
 		}
 		else
@@ -117,19 +119,19 @@ void MainMenuScene::Update()
 	}
 }
 
-void MainMenuScene::Draw()
+void EndScene::Draw()
 {
 	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_ButtonTexts[0]), m_ButtonTextPositions[0], m_TextColor);
 	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_ButtonTexts[1]), m_ButtonTextPositions[1], m_TextColor);
 }
 
-void MainMenuScene::OnSceneActivated()
+void EndScene::OnSceneActivated()
 {
 	SoundManager::Get()->GetSystem()->playSound(m_pMusicSound, nullptr, false, &m_pChannelBackground2D);
 	m_pChannelBackground2D->setVolume(0.2f);
 }
 
-void MainMenuScene::OnSceneDeactivated()
+void EndScene::OnSceneDeactivated()
 {
 	m_pChannelBackground2D->stop();
 }

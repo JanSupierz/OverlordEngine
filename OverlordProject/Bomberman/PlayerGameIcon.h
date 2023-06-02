@@ -14,17 +14,21 @@ public:
 	virtual void Update(const SceneContext& sceneContext) override;
 	virtual void Draw(const SceneContext&) override;
 	void InitPosition();
-	int GetPlayerIndex() const { return m_PlayerIndex; }
 
 	void AddStar();
+	std::string GetName() const;
+
+	void SetPowerUpText(const std::string& text) { m_PowerUpText = text; }
 private:
 	SpriteFont* m_pFont{};
 	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
 	XMFLOAT2 m_TextPosition{ -50.f, 30.f };
 	std::string m_Text{};
 
-	float m_StarOffset{};
-	int m_PlayerIndex{ -1 };
+	XMFLOAT4 m_PowerUpTextColor{ 0.f,0.f,0.f,1.f };
+	XMFLOAT2 m_PowerUpTextPosition{};
+	std::string m_PowerUpText{};
 
+	float m_StarOffset{};
 	bool m_Flip{};
 };

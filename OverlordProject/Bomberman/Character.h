@@ -1,8 +1,9 @@
 #pragma once
-
+#include "PickUp.h"
 class ModelAnimator;
 class Grid;
 class PlayerGameIcon;
+class Bomb;
 
 struct CharacterDesc
 {
@@ -34,6 +35,7 @@ struct CharacterDesc
 	int actionId_MoveForward{ -1 };
 	int actionId_MoveBackward{ -1 };
 	int actionId_PlaceBomb{ -1 };
+	int actionId_Detonate{ -1 };
 	GamepadIndex gamepadIndex{ 0 };
 
 	UINT currentClipId{ 0 };
@@ -46,7 +48,7 @@ struct CharacterDesc
 
 enum class CharacterAction
 {
-	running, standing, placingBomb, stopPlacing
+	running, standing, placingBomb
 };
 
 class Character : public GameObject
@@ -69,9 +71,14 @@ public:
 	bool GetIsActive() const { return m_IsActive; }
 	void SetIsActive(bool isActive);
 
+	PlayerGameIcon* GetIcon() const { return m_pIcon; }
 	void SetIcon(PlayerGameIcon* pIcon);
-	void UpdateScore();
+	void UpdateIcon();
 	int GetScore() const { return m_Score; }
+	void AddPowerUp(PickUpType type);
+	bool Kill();
+	void RemoveBomb() { m_pLastBomb = nullptr; }
+
 protected:
 	void Initialize(const SceneContext&) override;
 	void Update(const SceneContext&) override;
@@ -88,7 +95,6 @@ private:
 	float m_MoveAcceleration{},						//Acceleration required to reach maxMoveVelocity after 1 second (maxMoveVelocity / moveAccelerationTime)
 		m_FallAcceleration{},						//Acceleration required to reach maxFallVelocity after 1 second (maxFallVelocity / fallAccelerationTime)
 		m_MoveSpeed{};								//MoveSpeed > Horizontal Velocity = MoveDirection * MoveVelocity (= TotalVelocity.xz)
-	float m_AnimationTimeLeft{};
 
 	XMFLOAT3 m_TotalVelocity{};						//TotalVelocity with X/Z for Horizontal Movement AND Y for Vertical Movement (fall/jump)
 	XMFLOAT3 m_CurrentDirection{};					//Current/Last Direction based on Camera forward/right (Stored for deacceleration)
@@ -104,5 +110,11 @@ private:
 	bool m_ScoreChanged{false};
 	bool m_CanPlaceBomb;
 	bool m_IsActive{true};
+
+	float m_VibrationCounter{};
+	float m_PowerUpTimer{};
+	PickUpType m_CurrentPowerUp{ PickUpType::None };
+
+	Bomb* m_pLastBomb{ nullptr };
 };
 

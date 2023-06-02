@@ -33,8 +33,27 @@ void Fire::Initialize(const SceneContext&)
 	transform->Scale(cubeDimensions);
 
 	//Model
-	auto pModel{ AddComponent(new ModelComponent(L"Meshes/Bomberman/SideCubes.ovm")) };
+	auto pModel{ AddComponent(new ModelComponent(L"Meshes/Bomberman/Cube.ovm")) };
 	pModel->SetMaterial(s_pFireMaterial);
+	pModel->SetMaterial(s_pFireMaterial, 0);
+	
+	//Particle System
+	ParticleEmitterSettings settings{};
+	settings.velocity = { 0.f,6.f,0.f };
+	settings.minSize = 1.f;
+	settings.maxSize = 5.f;
+	settings.minEnergy = 2.f;
+	settings.maxEnergy = 3.f;
+	settings.minScale = 3.5f;
+	settings.maxScale = 5.5f;
+	settings.minEmitterRadius = 1.5f;
+	settings.maxEmitterRadius = 3.5f;
+	settings.color = { 1.f,1.f,1.f, .6f };
+
+	const auto pVFX = AddChild(new GameObject);
+	pVFX->GetTransform()->Translate(0.f, 0.5f, 0.f);
+	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/FireBall.png", settings, 200));
+
 
 	//Rigid body
 	auto pRigid{ AddComponent(new RigidBodyComponent(true)) };
@@ -59,12 +78,15 @@ void Fire::Initialize(const SceneContext&)
 				//Other player gains a point
 				Character* pCharacter = static_cast<Character*>(pOther);
 
-				if (m_pOwner != pCharacter)
+				if (pCharacter->Kill() && m_pOwner != pCharacter)
 				{
 					m_pOwner->AddScore();
 				}
-
-				pCharacter->SetIsActive(false);
+			}
+			else if (tag == L"Bomb")
+			{
+				Bomb* pBomb = static_cast<Bomb*>(pOther);
+				pBomb->Explode();
 			}
 		}
 	};

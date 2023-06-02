@@ -49,6 +49,7 @@
     <ClCompile Include="Bomberman\PlayerGameIcon.cpp" />
     <ClCompile Include="Scenes\JoinMenuScene.cpp" />
     <ClCompile Include="Scenes\PauseScene.cpp" />
+    <ClCompile Include="Scenes\EndScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainGame.h" />
@@ -98,5 +99,6 @@
     <ClInclude Include="Bomberman\PlayerGameIcon.h" />
     <ClInclude Include="Scenes\JoinMenuScene.h" />
     <ClInclude Include="Scenes\PauseScene.h" />
+    <ClInclude Include="Scenes\EndScene.h" />
   </ItemGroup>
 </Project>

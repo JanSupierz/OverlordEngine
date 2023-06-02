@@ -29,6 +29,28 @@ void Character::Update(const SceneContext& sceneContext)
 
 		//Animations
 		UpdateAnimations(sceneContext);
+
+		//Update power up's
+		if (m_PowerUpTimer > 0.f)
+		{
+			m_PowerUpTimer -= sceneContext.pGameTime->GetElapsed();
+
+			if (m_PowerUpTimer <= 0.f)
+			{
+				m_PowerUpTimer = 0.f;
+				AddPowerUp(PickUpType::None);
+			}
+		}
+
+	}
+	else if (m_VibrationCounter > 0.f)
+	{
+		m_VibrationCounter -= sceneContext.pGameTime->GetElapsed();
+
+		if (m_VibrationCounter <= 0.f)
+		{
+			sceneContext.pInput->SetVibration(0.f, 0.f, m_CharacterDesc.gamepadIndex);
+		}
 	}
 }
 
@@ -45,6 +67,15 @@ void Character::HandleInput(const SceneContext& sceneContext)
 	case CharacterAction::standing:
 	{
 		bool placeBombTriggered{ sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_PlaceBomb) };
+		bool detonateTriggered{ sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_Detonate) };
+
+		if (detonateTriggered)
+		{
+			if (m_pLastBomb)
+			{
+				m_pLastBomb->Explode();
+			}
+		}
 
 		XMFLOAT2 move{ 0.f,0.f };
 		if (sceneContext.pInput->IsActionTriggered(m_CharacterDesc.actionId_MoveForward))
@@ -174,9 +205,6 @@ void Character::HandleInput(const SceneContext& sceneContext)
 	}
 	break;
 	case CharacterAction::placingBomb:
-		m_CanPlaceBomb = true;
-		break;
-	case CharacterAction::stopPlacing:
 		if (m_CanPlaceBomb)
 		{
 			PlaceBomb();
@@ -188,10 +216,10 @@ void Character::HandleInput(const SceneContext& sceneContext)
 	}
 }
 
-void Character::UpdateAnimations(const SceneContext& sceneContext)
+void Character::UpdateAnimations(const SceneContext&)
 {
-	constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
-	constexpr float placeBombAnimDuration{ 0.9f }; //Constant that can be used to compare if a float is near zero
+	//constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
+	//constexpr float placeBombAnimDuration{ 0.3f }; //Constant that can be used to compare if a float is near zero
 
 	UINT clipId{ 0 };
 
@@ -199,6 +227,7 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 	{
 		case CharacterAction::running:
 		{
+			m_pAnimator->Play();
 			clipId = m_CharacterDesc.clipId_Walking;
 
 			if (m_CharacterDesc.currentClipId != clipId)
@@ -213,6 +242,7 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 
 		case CharacterAction::standing:
 		{
+			m_pAnimator->Play();
 			clipId = m_CharacterDesc.clipId_Idle;
 
 			if (m_CharacterDesc.currentClipId != clipId)
@@ -227,47 +257,36 @@ void Character::UpdateAnimations(const SceneContext& sceneContext)
 
 		case CharacterAction::placingBomb:
 		{
-			m_AnimationTimeLeft -= sceneContext.pGameTime->GetElapsed();
+			constexpr float animationSpeed{ 3.f };
+			m_pAnimator->SetAnimationSpeed(animationSpeed);
 
 			clipId = m_CharacterDesc.clipId_PlaceBomb;
 
 			if (m_CharacterDesc.currentClipId != clipId)
 			{
+				//Set dropping bomb anim
 				m_pAnimator->SetAnimation(clipId);
-				m_pAnimator->Reset(false);
+				m_pAnimator->Play();
+				//Set current id
 				m_CharacterDesc.currentClipId = clipId;
-				m_AnimationTimeLeft = placeBombAnimDuration;
+
+				m_pAnimator->SetDoOnce(true);
+
+				m_CanPlaceBomb = true;
 			}
 
-			if (m_AnimationTimeLeft < -epsilon)
-			{
-				m_AnimationTimeLeft = placeBombAnimDuration;
-				m_pAnimator->SetPlayReversed(true);
-
-				m_CurrentAction = CharacterAction::stopPlacing;
-			}
-		}
-		break;
-
-		case CharacterAction::stopPlacing:
-		{
-			m_AnimationTimeLeft -= sceneContext.pGameTime->GetElapsed();
-
-			if (m_AnimationTimeLeft < epsilon)
-			{
-				m_pAnimator->SetPlayReversed(false);
+			//Stop placing
+			if (!m_pAnimator->IsPlaying())
+			{			
 				m_CurrentAction = CharacterAction::standing;
+
+				m_pAnimator->SetPlayReversed(false);
+				m_pAnimator->SetDoOnce(false);
 			}
 		}
 		break;
-
 	default:
 		break;
-	}
-
-	if (!m_pAnimator->IsPlaying())
-	{
-		m_pAnimator->Play();
 	}
 }
 
@@ -275,22 +294,19 @@ void Character::PlaceBomb()
 {
 	const auto transform{ GetTransform() };
 	XMFLOAT3 worldPos{ transform->GetWorldPosition() };
-	XMVECTOR forwardOffset{ XMLoadFloat3(&transform->GetForward()) * m_pGrid->GetCellSize() * 0.5f };
-	XMVECTOR currentPosition{ XMLoadFloat3(&transform->GetWorldPosition()) };
 
-	XMFLOAT3 bombPosition{};
-	XMStoreFloat3(&bombPosition, currentPosition + forwardOffset);
+	Node* pNode{ m_pGrid->GetNode(XMFLOAT2{worldPos.x, worldPos.z}) };
 
-	Node* pNode{ m_pGrid->GetNode(XMFLOAT2{bombPosition.x, bombPosition.z}) };
+	bool flames{ m_CurrentPowerUp == PickUpType::Flames };
+	bool fireUp{ m_CurrentPowerUp == PickUpType::FireUp };
 
-	//If node in front of you is blocked
-	if (!pNode || (pNode && pNode->GetCellState() != CellState::Empty))
+	if(flames || fireUp)
 	{
-		//Spawn the bomb in your cell
-		pNode = m_pGrid->GetNode(XMFLOAT2{ worldPos.x, worldPos.z });
+		AddPowerUp(PickUpType::None);
 	}
 
-	BombermanScene::AddGameObject(new Bomb(pNode->GetCol(), pNode->GetRow(), this, m_pGrid));
+	m_pLastBomb = new Bomb(pNode->GetCol(), pNode->GetRow(), this, m_pGrid, flames || fireUp, fireUp);
+	BombermanScene::AddGameObject(m_pLastBomb);
 }
 
 void Character::DrawImGui()
@@ -313,14 +329,28 @@ void Character::AddScore()
 	m_ScoreChanged = true;
 }
 
+bool Character::Kill()
+{
+	if (m_CurrentPowerUp != PickUpType::Shield)
+	{
+		m_IsActive = false;
+		GetTransform()->Translate(0.f, 100.f, -200.f);
+
+		SceneManager::Get()->GetActiveSceneContext().pInput->SetVibration(1.f, 1.f, m_CharacterDesc.gamepadIndex);
+
+		m_VibrationCounter = 1.f;
+
+		return true;
+	}
+
+	m_PowerUpTimer = 2.f;
+
+	return false;
+}
+
 void Character::SetIsActive(bool isActive)
 {
 	m_IsActive = isActive;
-
-	if (!m_IsActive)
-	{
-		GetTransform()->Translate(0.f, 100.f, -200.f);
-	}
 }
 
 void Character::SetIcon(PlayerGameIcon* pIcon)
@@ -328,11 +358,36 @@ void Character::SetIcon(PlayerGameIcon* pIcon)
 	m_pIcon = pIcon;
 }
 
-void Character::UpdateScore()
+void Character::UpdateIcon()
 {
 	if (m_ScoreChanged)
 	{
 		m_pIcon->AddStar();
 		m_ScoreChanged = false;
 	}
+}
+
+void Character::AddPowerUp(PickUpType type)
+{
+	m_CurrentPowerUp = type;
+
+	std::string text{ "" };
+
+	switch (m_CurrentPowerUp)
+	{
+	case PickUpType::Flames:
+		text = "Flames";
+		break;
+	case PickUpType::Shield:
+		text = "Shield";
+		break;
+	case PickUpType::FireUp:
+		text = "Fire Up";
+		break;
+	default:
+		text = "";
+		break;
+	}
+
+	m_pIcon->SetPowerUpText(text);
 }

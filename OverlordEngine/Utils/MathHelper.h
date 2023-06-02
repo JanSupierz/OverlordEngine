@@ -44,7 +44,7 @@ namespace MathHelper
 	}
 
 	template<typename T>
-	void Clamp(T& value, T hi, T lo)
+	void Clamp(T& value, T lo, T hi)
 	{
 		if (value > hi)
 			value = hi;

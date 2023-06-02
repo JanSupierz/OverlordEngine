@@ -23,7 +23,7 @@ void Cube::DestroyCube()
 	m_pNode->SetCellState(CellState::Empty);
 
 	//Spawn a random pickUp
-	int randomValue{ std::rand() % (static_cast<int>(PickUpType::Highest) * 1) };
+	int randomValue{ std::rand() % (static_cast<int>(PickUpType::Highest) * 10) };
 
 	if (randomValue <= static_cast<int>(PickUpType::Highest))
 	{

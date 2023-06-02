@@ -12,8 +12,8 @@ PxMaterial* Bomb::s_pStaticMaterial{ nullptr };
 std::unordered_map<int, int> Bomb::s_Characters;
 bool Bomb::s_BombExploded{ false };
 
-Bomb::Bomb(int col, int row, Character* pOwner, Grid* pGrid)
-	:m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_LifeTime{ 3.f }, m_MaxRange{ 3 }, m_StartCol{ col }, m_StartRow{ row }, m_AlreadyExploded{ false }
+Bomb::Bomb(int col, int row, Character* pOwner, Grid* pGrid, bool flamesPowerUp, bool fireUp)
+	:m_pOwner{ pOwner }, m_pGrid{ pGrid }, m_LifeTime{ 3.f }, m_MaxRange{ (fireUp ? 5 : 3) }, m_StartCol{ col }, m_StartRow{ row }, m_AlreadyExploded{ false }, m_FlamesPowerUp{ flamesPowerUp }
 {
 	SetTag(L"Bomb");
 }
@@ -32,6 +32,8 @@ void Bomb::Initialize(const SceneContext&)
 
 	auto pModel = AddComponent(new ModelComponent(L"Meshes/Bomberman/Bomb.ovm"));
 	pModel->SetMaterial(s_pBombMaterial);
+	pModel->SetMaterial(s_pBombMaterial, 0);
+	pModel->SetMaterial(s_pBombMaterial, 1);
 
 	//Particle System
 	ParticleEmitterSettings settings{};
@@ -39,16 +41,16 @@ void Bomb::Initialize(const SceneContext&)
 	settings.minSize = 1.f;
 	settings.maxSize = 2.f;
 	settings.minEnergy = 1.f;
-	settings.maxEnergy = 2.f;
-	settings.minScale = 3.5f;
-	settings.maxScale = 5.5f;
+	settings.maxEnergy = 1.1f;
+	settings.minScale = 1.5f;
+	settings.maxScale = 3.5f;
 	settings.minEmitterRadius = .2f;
 	settings.maxEmitterRadius = .5f;
 	settings.color = { 1.f,1.f,1.f, .6f };
 
 	const auto pVFX = AddChild(new GameObject);
 	pVFX->GetTransform()->Translate(0.2f, 1.1f, 0.1f);
-	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Smoke.png", settings, 200));
+	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Sparks.png", settings, 200));
 
 	//Is kinematic because it can move when you have a power up
 	m_pRigid = AddComponent(new RigidBodyComponent(false));
@@ -88,11 +90,6 @@ void Bomb::Initialize(const SceneContext&)
 				}
 				break;
 			}
-		}
-		else if (tag == L"Bomb")
-		{
-			//Explosion chain
-			Explode();
 		}
 	};
 
@@ -160,12 +157,14 @@ void Bomb::Explode()
 			BombermanScene::AddGameObject(new Fire(pCurrentNode->GetCol(), pCurrentNode->GetRow(), m_pOwner, m_pGrid));
 
 			//Stop moving in this direction
-			if (pCurrentNode->GetCellState() == CellState::Destructible)
+			if (!m_FlamesPowerUp && pCurrentNode->GetCellState() == CellState::Destructible)
 			{
 				break;
 			}
 		}
 	}
+
+	m_pOwner->RemoveBomb();
 
 	//You can't remove children during the update of game objects
 	BombermanScene::RemoveGameObject(this);
