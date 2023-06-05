@@ -30,7 +30,8 @@ void Bomb::Initialize(const SceneContext&)
 	GetTransform()->Translate(nodePos.x, cellSize, nodePos.y);
 	GetTransform()->Scale(cellSize);
 
-	auto pModel = AddComponent(new ModelComponent(L"Meshes/Bomberman/Bomb.ovm"));
+	//Add model
+	auto pModel = AddComponent(new ModelComponent(L"Meshes/Bomb.ovm"));
 	pModel->SetMaterial(s_pBombMaterial);
 	pModel->SetMaterial(s_pBombMaterial, 0);
 	pModel->SetMaterial(s_pBombMaterial, 1);
@@ -52,7 +53,7 @@ void Bomb::Initialize(const SceneContext&)
 	pVFX->GetTransform()->Translate(0.2f, 1.1f, 0.1f);
 	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Sparks.png", settings, 200));
 
-	//Is kinematic because it can move when you have a power up
+	//Is kinematic because it can move when you have a power up (not implemented yet)
 	m_pRigid = AddComponent(new RigidBodyComponent(false));
 
 	const auto geo{ PxSphereGeometry{cellSize * 0.6f} };

@@ -66,14 +66,17 @@ void MainMenuScene::Initialize()
 	m_ButtonTextPositions.emplace_back(XMFLOAT2{ 790.f,505.f });
 
 	//Input
-	auto inputAction{ InputAction(Start, InputState::pressed, -1, -1, XINPUT_GAMEPAD_A) };
-	m_SceneContext.pInput->AddInputAction(inputAction);
+	for (int index{}; index < m_NrPlayers; ++index)
+	{
+		auto inputAction{ InputAction(index * m_NrInputs + Start, InputState::pressed, -1, -1, XINPUT_GAMEPAD_A, static_cast<GamepadIndex>(index)) };
+		m_SceneContext.pInput->AddInputAction(inputAction);
 
-	inputAction = InputAction(Next, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_LEFT);
-	m_SceneContext.pInput->AddInputAction(inputAction);
+		inputAction = InputAction(index * m_NrInputs + Next, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_LEFT, static_cast<GamepadIndex>(index));
+		m_SceneContext.pInput->AddInputAction(inputAction);
 
-	inputAction = InputAction(Previous, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_RIGHT);
-	m_SceneContext.pInput->AddInputAction(inputAction);
+		inputAction = InputAction(index * m_NrInputs + Previous, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_RIGHT, static_cast<GamepadIndex>(index));
+		m_SceneContext.pInput->AddInputAction(inputAction);
+	}
 
 	//Sound 2D
 	const auto pFmod = SoundManager::Get()->GetSystem();
@@ -85,35 +88,38 @@ void MainMenuScene::Initialize()
 
 void MainMenuScene::Update()
 {
-	if (m_SceneContext.pInput->IsActionTriggered(Start))
+	for (int index{}; index < m_NrPlayers; ++index)
 	{
-		if (m_CurrentButton == Button::start)
+		if (m_SceneContext.pInput->IsActionTriggered(index * m_NrInputs + Start))
 		{
-			SceneManager::Get()->SetActiveGameScene(L"JoinMenuScene");
-		}
-		else
-		{
-			SceneManager::Get()->Quit();
-		}
+			if (m_CurrentButton == Button::start)
+			{
+				SceneManager::Get()->SetActiveGameScene(L"JoinMenuScene");
+			}
+			else
+			{
+				SceneManager::Get()->Quit();
+			}
 
-		SoundManager::Get()->GetSystem()->playSound(m_pClickSound, nullptr, false, &m_pChannelEffects2D);
-	}
-	else if (m_SceneContext.pInput->IsActionTriggered(Next) || m_SceneContext.pInput->IsActionTriggered(Previous))
-	{
-		if (m_CurrentButton == Button::start)
-		{
-			m_CurrentButton = Button::quit;
-			m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+			SoundManager::Get()->GetSystem()->playSound(m_pClickSound, nullptr, false, &m_pChannelEffects2D);
 		}
-		else
+		else if (m_SceneContext.pInput->IsActionTriggered(index * m_NrInputs + Next) || m_SceneContext.pInput->IsActionTriggered(index * m_NrInputs + Previous))
 		{
-			m_CurrentButton = Button::start;
-			m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
-		}
+			if (m_CurrentButton == Button::start)
+			{
+				m_CurrentButton = Button::quit;
+				m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+			}
+			else
+			{
+				m_CurrentButton = Button::start;
+				m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+			}
 
-		SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
+			SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
+		}
 	}
 }
 

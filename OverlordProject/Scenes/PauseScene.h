@@ -25,6 +25,9 @@ private:
 		Start, Next, Previous
 	};
 
+	int m_NrInputs{ 3 };
+	int m_NrPlayers{ 4 };
+
 	enum class Button
 	{
 		resume, quit, restart

@@ -3,12 +3,7 @@
 #include "BombermanScene.h"
 #include "Bomberman/PlayerJoinIcon.h"
 
-#include "Materials/Shadow/DiffuseMaterial_Shadow.h"
-#include "Materials/DiffuseMaterial.h"
-#include "Materials/DiffuseMaterial_Skinned.h"
 #include "Materials/Shadow/ColorMaterial_Shadow_Skinned.h"
-#include "Materials/Shadow/DiffuseMaterial_Shadow_Skinned.h"
-#include "Materials/Shadow/ColorMaterial_Shadow.h"
 
 JoinMenuScene::JoinMenuScene()
 	:GameScene(L"JoinMenuScene")

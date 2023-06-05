@@ -1,14 +1,6 @@
 #include "stdafx.h"
 #include "PauseScene.h"
 #include "BombermanScene.h"
-#include "Bomberman/PlayerJoinIcon.h"
-
-#include "Materials/Shadow/DiffuseMaterial_Shadow.h"
-#include "Materials/DiffuseMaterial.h"
-#include "Materials/DiffuseMaterial_Skinned.h"
-#include "Materials/Shadow/ColorMaterial_Shadow_Skinned.h"
-#include "Materials/Shadow/DiffuseMaterial_Shadow_Skinned.h"
-#include "Materials/Shadow/ColorMaterial_Shadow.h"
 
 PauseScene::PauseScene()
 	:GameScene(L"PauseScene")
@@ -89,14 +81,17 @@ void PauseScene::Initialize()
 
 
 	//Input
-	auto inputAction{ InputAction(Start, InputState::pressed, -1, -1, XINPUT_GAMEPAD_A) };
-	m_SceneContext.pInput->AddInputAction(inputAction);
+	for (int index{}; index < m_NrPlayers; ++index)
+	{
+		auto inputAction{ InputAction(index * m_NrInputs + Start, InputState::pressed, -1, -1, XINPUT_GAMEPAD_A,static_cast<GamepadIndex>(index)) };
+		m_SceneContext.pInput->AddInputAction(inputAction);
 
-	inputAction = InputAction(Previous, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_LEFT);
-	m_SceneContext.pInput->AddInputAction(inputAction);
+		inputAction = InputAction(index * m_NrInputs + Next, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_RIGHT, static_cast<GamepadIndex>(index));
+		m_SceneContext.pInput->AddInputAction(inputAction);
 
-	inputAction = InputAction(Next, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_RIGHT);
-	m_SceneContext.pInput->AddInputAction(inputAction);
+		inputAction = InputAction(index * m_NrInputs + Previous, InputState::pressed, -1, -1, XINPUT_GAMEPAD_DPAD_LEFT, static_cast<GamepadIndex>(index));
+		m_SceneContext.pInput->AddInputAction(inputAction);
+	}
 
 	//Sound 2D
 	const auto pFmod = SoundManager::Get()->GetSystem();
@@ -108,81 +103,84 @@ void PauseScene::Initialize()
 
 void PauseScene::Update()
 {
-	if (m_SceneContext.pInput->IsActionTriggered(Start))
+	for (int index{}; index < m_NrPlayers; ++index)
 	{
-		switch (m_CurrentButton)
+		if (m_SceneContext.pInput->IsActionTriggered(index * m_NrInputs + Start))
 		{
-		case Button::resume:
-			SceneManager::Get()->SetActiveGameScene(L"BombermanScene");
-			break;
-		case Button::restart:
-			SceneManager::Get()->RemoveGameScene(BombermanScene::GetCurrent(), true);
-			SceneManager::Get()->SetActiveGameScene(L"JoinMenuScene");
-			break;
-		case Button::quit:
-			SceneManager::Get()->Quit();
-			break;
-		}
+			switch (m_CurrentButton)
+			{
+			case Button::resume:
+				SceneManager::Get()->SetActiveGameScene(L"BombermanScene");
+				break;
+			case Button::restart:
+				SceneManager::Get()->RemoveGameScene(BombermanScene::GetCurrent(), true);
+				SceneManager::Get()->SetActiveGameScene(L"JoinMenuScene");
+				break;
+			case Button::quit:
+				SceneManager::Get()->Quit();
+				break;
+			}
 
-		SoundManager::Get()->GetSystem()->playSound(m_pClickSound, nullptr, false, &m_pChannelEffects2D);
-	}
-	else if (m_SceneContext.pInput->IsActionTriggered(Next))
-	{
-		switch (m_CurrentButton)
+			SoundManager::Get()->GetSystem()->playSound(m_pClickSound, nullptr, false, &m_pChannelEffects2D);
+		}
+		else if (m_SceneContext.pInput->IsActionTriggered(index * m_NrInputs + Next))
 		{
-		case Button::resume:
-			m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/ButtonSelected.png");
-			m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
+			switch (m_CurrentButton)
+			{
+			case Button::resume:
+				m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+				m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
 
-			m_CurrentButton = Button::restart;
-			break;
-		case Button::restart:
-			m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[2]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+				m_CurrentButton = Button::restart;
+				break;
+			case Button::restart:
+				m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[2]->SetTexture(L"Textures/Menu/ButtonSelected.png");
 
-			m_CurrentButton = Button::quit;
-			break;
-		case Button::quit:
-			m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
+				m_CurrentButton = Button::quit;
+				break;
+			case Button::quit:
+				m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
 
-			m_CurrentButton = Button::resume;
-			break;
+				m_CurrentButton = Button::resume;
+				break;
+			}
+
+			SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
 		}
-
-		SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
-	}
-	else if (m_SceneContext.pInput->IsActionTriggered(Previous))
-	{
-		switch (m_CurrentButton)
+		else if (m_SceneContext.pInput->IsActionTriggered(index * m_NrInputs + Previous))
 		{
-		case Button::resume:
-			m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[2]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+			switch (m_CurrentButton)
+			{
+			case Button::resume:
+				m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[2]->SetTexture(L"Textures/Menu/ButtonSelected.png");
 
-			m_CurrentButton = Button::quit;
-			break;
-		case Button::restart:
-			m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
+				m_CurrentButton = Button::quit;
+				break;
+			case Button::restart:
+				m_pSprites[0]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
 
-			m_CurrentButton = Button::resume;
-			break;
-		case Button::quit:
-			m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
-			m_pSprites[1]->SetTexture(L"Textures/Menu/ButtonSelected.png");
-			m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
+				m_CurrentButton = Button::resume;
+				break;
+			case Button::quit:
+				m_pSprites[0]->SetTexture(L"Textures/Menu/Button.png");
+				m_pSprites[1]->SetTexture(L"Textures/Menu/ButtonSelected.png");
+				m_pSprites[2]->SetTexture(L"Textures/Menu/Button.png");
 
-			m_CurrentButton = Button::restart;
-			break;
+				m_CurrentButton = Button::restart;
+				break;
+			}
+
+			SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
 		}
-
-		SoundManager::Get()->GetSystem()->playSound(m_pSelectSound, nullptr, false, &m_pChannelEffects2D);
 	}
 }
 

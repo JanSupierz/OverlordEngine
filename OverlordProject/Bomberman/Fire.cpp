@@ -33,7 +33,7 @@ void Fire::Initialize(const SceneContext&)
 	transform->Scale(cubeDimensions);
 
 	//Model
-	auto pModel{ AddComponent(new ModelComponent(L"Meshes/Bomberman/Cube.ovm")) };
+	auto pModel{ AddComponent(new ModelComponent(L"Meshes/Cube.ovm")) };
 	pModel->SetMaterial(s_pFireMaterial);
 	pModel->SetMaterial(s_pFireMaterial, 0);
 	

@@ -34,15 +34,6 @@ PlayerGameIcon::~PlayerGameIcon()
 {
 }
 
-void PlayerGameIcon::Initialize(const SceneContext&)
-{
-}
-
-void PlayerGameIcon::Update(const SceneContext&)
-{
-
-}
-
 void PlayerGameIcon::Draw(const SceneContext&)
 {
 	TextRenderer::Get()->DrawText(m_pFont, StringUtil::utf8_decode(m_Text), m_TextPosition, m_TextColor);
@@ -83,6 +74,7 @@ void PlayerGameIcon::AddStar()
 
 std::string PlayerGameIcon::GetName() const
 {
+	//Get everything after P -> P1 = 1
 	return m_Text.substr(1);
 }
 

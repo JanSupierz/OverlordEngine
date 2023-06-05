@@ -11,8 +11,6 @@ public:
 	PlayerJoinIcon& operator=(const PlayerJoinIcon& other) = delete;
 	PlayerJoinIcon& operator=(PlayerJoinIcon&& other) noexcept = delete;
 
-	virtual void Initialize(const SceneContext&) override;
-	virtual void Update(const SceneContext& sceneContext) override;
 	virtual void Draw(const SceneContext&) override;
 	void InitPosition();
 

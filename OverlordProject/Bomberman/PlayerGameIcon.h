@@ -10,8 +10,6 @@ public:
 	PlayerGameIcon& operator=(const PlayerGameIcon& other) = delete;
 	PlayerGameIcon& operator=(PlayerGameIcon&& other) noexcept = delete;
 
-	virtual void Initialize(const SceneContext&) override;
-	virtual void Update(const SceneContext& sceneContext) override;
 	virtual void Draw(const SceneContext&) override;
 	void InitPosition();
 
@@ -21,14 +19,15 @@ public:
 	void SetPowerUpText(const std::string& text) { m_PowerUpText = text; }
 private:
 	SpriteFont* m_pFont{};
+
 	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
 	XMFLOAT2 m_TextPosition{ -50.f, 30.f };
 	std::string m_Text{};
 
-	XMFLOAT4 m_PowerUpTextColor{ 0.f,0.f,0.f,1.f };
+	XMFLOAT4 m_PowerUpTextColor{ 1.f,1.f,1.f,1.f };
 	XMFLOAT2 m_PowerUpTextPosition{};
 	std::string m_PowerUpText{};
 
 	float m_StarOffset{};
-	bool m_Flip{};
+	const bool m_Flip{};
 };

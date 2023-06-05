@@ -62,7 +62,6 @@ public:
 	Character& operator=(const Character& other) = delete;
 	Character& operator=(Character&& other) noexcept = delete;
 
-	void DrawImGui();
 	void SetAnimator(ModelAnimator* pAnimator);
 
 	int GetIndex() const;

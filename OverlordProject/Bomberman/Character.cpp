@@ -43,6 +43,7 @@ void Character::Update(const SceneContext& sceneContext)
 		}
 
 	}
+	//Stop vibrating controller after death
 	else if (m_VibrationCounter > 0.f)
 	{
 		m_VibrationCounter -= sceneContext.pGameTime->GetElapsed();
@@ -218,9 +219,6 @@ void Character::HandleInput(const SceneContext& sceneContext)
 
 void Character::UpdateAnimations(const SceneContext&)
 {
-	//constexpr float epsilon{ 0.01f }; //Constant that can be used to compare if a float is near zero
-	//constexpr float placeBombAnimDuration{ 0.3f }; //Constant that can be used to compare if a float is near zero
-
 	UINT clipId{ 0 };
 
 	switch (m_CurrentAction)
@@ -267,11 +265,11 @@ void Character::UpdateAnimations(const SceneContext&)
 				//Set dropping bomb anim
 				m_pAnimator->SetAnimation(clipId);
 				m_pAnimator->Play();
+
 				//Set current id
 				m_CharacterDesc.currentClipId = clipId;
 
 				m_pAnimator->SetDoOnce(true);
-
 				m_CanPlaceBomb = true;
 			}
 
@@ -297,6 +295,7 @@ void Character::PlaceBomb()
 
 	Node* pNode{ m_pGrid->GetNode(XMFLOAT2{worldPos.x, worldPos.z}) };
 
+	//Check if player is using power up
 	bool flames{ m_CurrentPowerUp == PickUpType::Flames };
 	bool fireUp{ m_CurrentPowerUp == PickUpType::FireUp };
 
@@ -306,11 +305,8 @@ void Character::PlaceBomb()
 	}
 
 	m_pLastBomb = new Bomb(pNode->GetCol(), pNode->GetRow(), this, m_pGrid, flames || fireUp, fireUp);
-	BombermanScene::AddGameObject(m_pLastBomb);
-}
 
-void Character::DrawImGui()
-{
+	BombermanScene::AddGameObject(m_pLastBomb);
 }
 
 void Character::SetAnimator(ModelAnimator* pAnimator)

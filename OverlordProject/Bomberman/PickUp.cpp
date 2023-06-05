@@ -28,7 +28,9 @@ void PickUp::Initialize(const SceneContext&)
 
 	const auto pModelObject{ AddChild(new GameObject) };
 	pModelObject->GetTransform()->Translate(0.f, -48.5f, 0.f);
-	auto pModel{ pModelObject->AddComponent(new ModelComponent(L"Meshes/Bomberman/PickUp.ovm")) };
+
+	//Set materials
+	auto pModel{ pModelObject->AddComponent(new ModelComponent(L"Meshes/PickUp.ovm")) };
 	pModel->SetMaterial(s_pPickUpMaterials[PickUpType::None]);
 	pModel->SetMaterial(s_pPickUpMaterials[m_Type], 1);
 	pModel->SetMaterial(s_pPickUpMaterials[PickUpType::None], 0);
@@ -51,8 +53,9 @@ void PickUp::Initialize(const SceneContext&)
 	
 	const auto pVFX = AddChild(new GameObject);
 	pVFX->GetTransform()->Translate(0.2f, 1.1f, 0.1f);
-	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Bomberman/Star.png", settings, 10));
+	pVFX->AddComponent(new ParticleEmitterComponent(L"Textures/Star.png", settings, 10));
 	
+	//Physics
 	auto pRigid{ AddComponent(new RigidBodyComponent(false)) };
 	
 	const auto geo{ PxSphereGeometry{cellSize * 0.5f} };

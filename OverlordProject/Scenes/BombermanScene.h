@@ -60,14 +60,12 @@ protected:
 	virtual void OnSceneDeactivated() override;
 
 private:
+	void UpdateGameEnd();
 	void UpdateCamera();
 	void InitArena();
 	void CreateCube(bool isDestructible, int col, int row, int height, const std::wstring& meshFilePath, BaseMaterial* pColorMaterial, PxMaterial* pStaticMaterial, float heightOffset = 0.f, float scale = 1.f, bool disableRigid = false);
 
 	int ToInputId(int index, int basicInputId) const;
-
-	FixedCamera* m_pFixedCamera{};
-	CameraComponent* m_pCameraComp{};
 
 	const float m_MaxCameraHeight{ 150.f };
 	int m_MinNrAlive{ 0 };
@@ -78,7 +76,7 @@ private:
 	char** m_ClipNames{};
 	UINT m_ClipCount{};
 
-	const int m_NrPlayerInputs{ 6 };
+	const int m_NrPlayerInputs{ 7 };
 
 	enum InputIds
 	{
@@ -88,7 +86,7 @@ private:
 		CharacterMoveBackward,
 		CharacterPlaceBomb,
 		CharacterDetonate,
-		Pause = 50
+		Pause
 	};
 
 	const float m_CubeSize;
@@ -98,9 +96,6 @@ private:
 	PostChromaticAberration* m_pChromatic;
 	const float m_MaxScreenShakeDuration{ 0.5f };
 	float m_ScreenShakeTimer{};
-
-	std::string m_EndText{ "Draw!" };
-	XMFLOAT2 m_EndTextPosition{};
 
 	//Sounds
 	FMOD::Channel* m_pChannel2D{ nullptr };
@@ -113,16 +108,22 @@ private:
 	FMOD::Sound* m_pPickUpSound{ nullptr };
 	FMOD::Sound* m_pClockSound{ nullptr };
 	bool m_ClockSoundActivated{ false };
+
 	//UI
 	SpriteFont* m_pFont{};
 	XMFLOAT4 m_TextColor{ 1.f,1.f,1.f,1.f };
+
 	XMFLOAT4 m_TimerTextColor{ 1.f,1.f,1.f,1.f };
 	std::string m_TimerText{};
 	XMFLOAT2 m_TimerTextPosition{};
+
 	float m_TimeLeft{ 180.f };
 	int m_NrMinutes{};
 	int m_NrSeconds{};
-	bool m_GameEnded{false};
+	bool m_GameEnded{ false };
+
+	std::string m_EndText{ "Draw!" };
+	XMFLOAT2 m_EndTextPosition{};
 
 	float m_WaitTime{ 5.f };
 
@@ -132,9 +133,13 @@ private:
 	static bool s_CheckVectors;
 	static BombermanScene* s_CurrentScene;
 
+	//Camera
 	XMFLOAT3 m_DefaultCameraOffset;
 	XMFLOAT3 m_LastCameraPosition{};
 	float m_LastFov{ XM_PIDIV4 };
+
+	FixedCamera* m_pFixedCamera{};
+	CameraComponent* m_pCameraComp{};
 };
 
 

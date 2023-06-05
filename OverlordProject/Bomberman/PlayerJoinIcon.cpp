@@ -11,15 +11,6 @@ PlayerJoinIcon::~PlayerJoinIcon()
 {
 }
 
-void PlayerJoinIcon::Initialize(const SceneContext&)
-{
-}
-
-void PlayerJoinIcon::Update(const SceneContext&)
-{
-
-}
-
 void PlayerJoinIcon::Draw(const SceneContext&)
 {
 	if (!IsFree())
